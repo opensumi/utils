@@ -1,0 +1,17 @@
+{
+  "name": "rpc",
+  "packageManager": "yarn@3.6.3",
+  "private": true,
+  "scripts": {
+    "build": "lerna run build"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.19.2",
+    "glob": "^10.3.4",
+    "lerna": "^7.2.0",
+    "prettier": "^3.0.3"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2017", "DOM"],
+    "target": "es6",
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
+    "esModuleInterop": true,
+    "declaration": true,
+    "outDir": "types",
+    "emitDeclarationOnly": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"]
+}

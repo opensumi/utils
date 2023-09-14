@@ -1,0 +1,23 @@
+{
+  "name": "@opensumi/simple-rpc",
+  "private": "true",
+  "version": "0.0.1",
+  "files": [
+    "lib/**",
+    "esm/**",
+    "types/**",
+    "bin/**",
+    "src/**"
+  ],
+  "main": "lib/index.js",
+  "module": "esm/index.js",
+  "types": "types/index.d.ts",
+  "source": "src/index.ts",
+  "scripts": {
+    "build": "node scripts/build.mjs && tsc -p tsconfig.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {}
+}
