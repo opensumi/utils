@@ -654,24 +654,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opensumi/ide-utils@npm:^2.26.8":
-  version: 2.26.8
-  resolution: "@opensumi/ide-utils@npm:2.26.8"
-  dependencies:
-    iconv-lite: ^0.6.3
-    jschardet: 3.0.0
-    mri: ^1.2.0
-    nanoid: 3.3.4
-    vscode-uri: 3.0.2
-  checksum: 29d73bfe008fd8b58e62c5226165121f5714705969e578b10aaa265005bbb9f6683d6354212242e04a9efeccee10e02d3fe847a47b7d28bc6a72438a6d6d5b09
-  languageName: node
-  linkType: hard
-
 "@opensumi/simple-rpc@workspace:packages/simple-rpc":
   version: 0.0.0-use.local
   resolution: "@opensumi/simple-rpc@workspace:packages/simple-rpc"
-  dependencies:
-    "@opensumi/ide-utils": ^2.26.8
   languageName: unknown
   linkType: soft
 
@@ -2447,7 +2432,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"iconv-lite@npm:^0.6.2, iconv-lite@npm:^0.6.3":
+"iconv-lite@npm:^0.6.2":
   version: 0.6.3
   resolution: "iconv-lite@npm:0.6.3"
   dependencies:
@@ -2845,13 +2830,6 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: bef146085f472d44dee30ec34e5cf36bf89164f5d585435a3d3da89e52622dff0b188a580e4ad091c3341889e14cb88cac6e4deb16dc5b1e9623bb0601fc255c
-  languageName: node
-  linkType: hard
-
-"jschardet@npm:3.0.0":
-  version: 3.0.0
-  resolution: "jschardet@npm:3.0.0"
-  checksum: f391df4512bbd7edf97f82be09ba841a80cb4408c3ab96cf7e9c307737bd08cd8b3d10986f3db844d04151530395dcd174b3288f17144206d42675ecf482c286
   languageName: node
   linkType: hard
 
@@ -3450,13 +3428,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mri@npm:^1.2.0":
-  version: 1.2.0
-  resolution: "mri@npm:1.2.0"
-  checksum: 83f515abbcff60150873e424894a2f65d68037e5a7fcde8a9e2b285ee9c13ac581b63cfc1e6826c4732de3aeb84902f7c1e16b7aff46cd3f897a0f757a894e85
-  languageName: node
-  linkType: hard
-
 "ms@npm:2.1.2":
   version: 2.1.2
   resolution: "ms@npm:2.1.2"
@@ -3495,15 +3466,6 @@ __metadata:
   version: 1.0.0
   resolution: "mute-stream@npm:1.0.0"
   checksum: 36fc968b0e9c9c63029d4f9dc63911950a3bdf55c9a87f58d3a266289b67180201cade911e7699f8b2fa596b34c9db43dad37649e3f7fdd13c3bb9edb0017ee7
-  languageName: node
-  linkType: hard
-
-"nanoid@npm:3.3.4":
-  version: 3.3.4
-  resolution: "nanoid@npm:3.3.4"
-  bin:
-    nanoid: bin/nanoid.cjs
-  checksum: 2fddd6dee994b7676f008d3ffa4ab16035a754f4bb586c61df5a22cf8c8c94017aadd360368f47d653829e0569a92b129979152ff97af23a558331e47e37cd9c
   languageName: node
   linkType: hard
 
@@ -5241,13 +5203,6 @@ __metadata:
   dependencies:
     builtins: ^1.0.3
   checksum: ce4c68207abfb22c05eedb09ff97adbcedc80304a235a0844f5344f1fd5086aa80e4dbec5684d6094e26e35065277b765c1caef68bcea66b9056761eddb22967
-  languageName: node
-  linkType: hard
-
-"vscode-uri@npm:3.0.2":
-  version: 3.0.2
-  resolution: "vscode-uri@npm:3.0.2"
-  checksum: 5ed2c95a483a43398df40c31d23e44f138e9c8bed384fa4edf0fd97396ce18ae8dae173c5d55e69b47205e2108e165cb165b12843a74e8b35c066d9f3810fb6c
   languageName: node
   linkType: hard
 
