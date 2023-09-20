@@ -1,16 +1,22 @@
-export class MessageQueue {
-  private _queue: any[] = [];
+export interface MessageQueueOptions<T> {
+  send: (e: T) => void;
+  sendChannelIsReady: () => boolean;
+  flushTimeout?: number;
+}
+
+export class MessageQueue<T extends any> {
+  private _queue: T[] = [];
   private _flushing = false;
 
-  private _send: (e: any) => void;
+  private _send: (e: T) => void;
   private _sendChannelIsReady: () => boolean;
 
-  constructor(options: {
-    send: (e: any) => void;
-    sendChannelIsReady: () => boolean;
-  }) {
+  private _flushTimeout: number;
+
+  constructor(options: MessageQueueOptions<T>) {
     this._send = options.send;
     this._sendChannelIsReady = options.sendChannelIsReady;
+    this._flushTimeout = options.flushTimeout || 16;
   }
 
   flush() {
@@ -32,7 +38,7 @@ export class MessageQueue {
     this._flushing = false;
   }
 
-  push(data: any) {
+  push(data: T) {
     this._queue.push(data);
   }
 
@@ -65,6 +71,6 @@ export class MessageQueue {
 
     this.scheduled = setTimeout(() => {
       this.scheduleFlush();
-    }, 50);
+    }, this._flushTimeout);
   }
 }
