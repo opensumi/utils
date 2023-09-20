@@ -1,6 +1,6 @@
 {
   "name": "@opensumi/simple-rpc",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "files": [
     "lib/**/*.js",
     "esm/**/*.js",
