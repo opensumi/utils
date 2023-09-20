@@ -654,6 +654,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@opensumi/message-queue@workspace:packages/message-queue":
+  version: 0.0.0-use.local
+  resolution: "@opensumi/message-queue@workspace:packages/message-queue"
+  languageName: unknown
+  linkType: soft
+
 "@opensumi/simple-rpc@workspace:packages/simple-rpc":
   version: 0.0.0-use.local
   resolution: "@opensumi/simple-rpc@workspace:packages/simple-rpc"

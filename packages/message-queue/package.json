@@ -1,5 +1,5 @@
 {
-  "name": "@opensumi/simple-rpc",
+  "name": "@opensumi/message-queue",
   "version": "0.0.1",
   "files": [
     "lib/**/*.js",
