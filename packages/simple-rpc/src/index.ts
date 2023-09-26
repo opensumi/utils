@@ -28,12 +28,12 @@ export interface ErrorLike {
 
 type TResponseMessage = [/*msgId*/ string, /*error*/ ErrorLike, /*result*/ any];
 
-const kResponsePrefix = '-->';
+const kResponsePrefix = '->';
 
 const getUniqueId = (id: string | number) => `${id}`;
 
 function serializeErrorReplacer(key: string, value: any) {
-  if (value?.constructor.name === 'Error') {
+  if (value instanceof Error) {
     return {
       name: value.name,
       message: value.message,
@@ -66,6 +66,10 @@ function isPromise<T = any>(obj: any): obj is Promise<T> {
   );
 }
 
+class RPCError extends Error {
+  name = 'RPCError';
+}
+
 /**
  * This simple RPC client is used to communicate with each other between the webview and the host.
  * it use a duplex communication channel to send message and receive message(generalized as `postMessage` and `onMessage`).
@@ -89,13 +93,11 @@ export class RPCClient {
 
     this.onMessage((msg: TOnMessageCbParams) => {
       if (!Array.isArray(msg) || msg.length < 2) {
-        // 不是符合规范的 message
         return;
       }
 
       const [messageId, errorOrMethod, resultOrPayload] = msg;
       if (!messageId) {
-        // 不是符合规范的 message
         return;
       }
 
@@ -103,23 +105,39 @@ export class RPCClient {
         const callbackId = messageId.slice(kResponsePrefix.length);
         const callback = this.#callbacks[callbackId];
         if (!callback) {
-          // 没找到对应的回调函数，不是符合规范的 message
           return;
         }
+
         delete this.#callbacks[callbackId];
         callback(errorOrMethod, resultOrPayload);
       } else {
-        // 不是响应的 message，是 invoke 发过来的 message
-        if (!errorOrMethod) {
-          return;
-        }
+        let result = undefined;
+        let error: Error | undefined = undefined;
 
         const fn = this._functions[errorOrMethod];
-        if (!fn) {
-          return;
+        if (fn) {
+          try {
+            result = fn.apply(undefined, resultOrPayload);
+          } catch (e) {
+            error = e;
+          }
+        } else {
+          error = new RPCError(`method ${errorOrMethod} not found`);
         }
 
-        this.execFn(messageId, fn, resultOrPayload);
+        if (isPromise(result)) {
+          result
+            .then((res) =>
+              this.postMessage(
+                this._constructAnswer(messageId, undefined, res),
+              ),
+            )
+            .catch((err) =>
+              this.postMessage(this._constructAnswer(messageId, err)),
+            );
+        } else {
+          this.postMessage(this._constructAnswer(messageId, error, result));
+        }
       }
     });
 
@@ -168,30 +186,6 @@ export class RPCClient {
         delete this._functions[_method];
       },
     };
-  }
-
-  private execFn(messageId: string, fn: any, payload: any) {
-    let result = null;
-    let error: Error | null = null;
-    try {
-      result = fn.apply(undefined, payload);
-    } catch (e) {
-      error = e;
-    }
-
-    if (error) {
-      this.postMessage(this._constructAnswer(messageId, error));
-    } else if (isPromise(result)) {
-      result
-        .then((res) =>
-          this.postMessage(this._constructAnswer(messageId, null, res)),
-        )
-        .catch((err) =>
-          this.postMessage(this._constructAnswer(messageId, err)),
-        );
-    } else {
-      this.postMessage(this._constructAnswer(messageId, null, result));
-    }
   }
 
   private saveFunctionsForProxy(fns: Record<string, any>) {

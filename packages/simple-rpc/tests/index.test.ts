@@ -1,24 +1,8 @@
-import { RPCClient } from '../src';
-import { MessageChannel } from 'node:worker_threads';
-import { sleep } from './utils';
+import { createPair, sleep } from './utils';
 
 describe('simple-rpc', () => {
   it('should work', async () => {
-    const channel = new MessageChannel();
-    const c1 = new RPCClient({
-      postMessage: channel.port1.postMessage.bind(channel.port1),
-      onMessage: (cb) => {
-        channel.port1.on('message', cb);
-      },
-    });
-
-    const c2 = new RPCClient({
-      postMessage: channel.port2.postMessage.bind(channel.port2),
-      onMessage: (cb) => {
-        channel.port2.on('message', cb);
-      },
-    });
-
+    const { c1, c2, dispose } = createPair();
     c1.on('short', async (url: string) => {
       await sleep(100);
       return url;
@@ -34,25 +18,28 @@ describe('simple-rpc', () => {
     const url = await c2.invoke('short', 'https://www.google.com');
     expect(url).toBe('https://www.google.com');
 
-    channel.port1.close();
-    channel.port2.close();
+    dispose();
+  });
+
+  it('can invoke undefined method', async () => {
+    const { c1, c2, dispose } = createPair();
+
+    c2.on('add', (a: number, b: number) => {
+      return a + b;
+    });
+
+    expect(c1.invoke('add1', 1, 2)).rejects.toThrow();
+
+    await c1.invoke('add2').catch((e) => {
+      console.log(e);
+      expect(e.message).toBe('method add2 not found');
+    });
+
+    dispose();
   });
 
   it('can handle error', async () => {
-    const channel = new MessageChannel();
-    const c1 = new RPCClient({
-      postMessage: channel.port1.postMessage.bind(channel.port1),
-      onMessage: (cb) => {
-        channel.port1.on('message', cb);
-      },
-    });
-
-    const c2 = new RPCClient({
-      postMessage: channel.port2.postMessage.bind(channel.port2),
-      onMessage: (cb) => {
-        channel.port2.on('message', cb);
-      },
-    });
+    const { c1, c2, dispose } = createPair();
 
     c2.on('add', async (a: number, b: number) => {
       const err = new Error('error');
@@ -67,7 +54,6 @@ describe('simple-rpc', () => {
       }),
     );
 
-    channel.port1.close();
-    channel.port2.close();
+    dispose();
   });
 });
