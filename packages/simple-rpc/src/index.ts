@@ -133,7 +133,7 @@ export class RPCClient {
     return new Promise((resolve, reject) => {
       this.#callbacks[messageId] = function (error, result) {
         if (error) {
-          return reject(new Error(error));
+          return reject(reviveError(error));
         }
         resolve(result);
       };
