@@ -8,8 +8,8 @@ export interface ILogger {
 }
 
 export type IOptions = {
-  onMessage: (cb: (msg: any) => void) => void;
-  postMessage: (msg: any) => void;
+  onMessage: (cb: (data: any) => void) => void;
+  postMessage: (data: any) => void;
   logger?: ILogger;
 };
 
@@ -19,14 +19,46 @@ type TOnMessageCbParams = [
   /*payload*/ any,
 ];
 
+export interface ErrorLike {
+  message: string;
+  name: string;
+  stack?: string;
+  cause?: ErrorLike;
+}
+
+type TResponseMessage = [/*msgId*/ string, /*error*/ ErrorLike, /*result*/ any];
+
 const kResponsePrefix = '-->';
 
 const getUniqueId = (id: string | number) => `${id}`;
 
-/**
- * 判断是不是 Promise
- */
-function isPromise(obj: any) {
+function serializeErrorReplacer(key: string, value: any) {
+  if (value?.constructor.name === 'Error') {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack,
+      cause: value.cause,
+    };
+  }
+  return value;
+}
+
+function serializeError(error: Error): ErrorLike {
+  return JSON.parse(JSON.stringify(error, serializeErrorReplacer));
+}
+
+function reviveError(error: ErrorLike): Error {
+  const result = new Error(error.message);
+  result.name = error.name;
+  result.stack = error.stack;
+  if (error.cause) {
+    (result as unknown as { cause: Error }).cause = reviveError(error.cause);
+  }
+  return result;
+}
+
+function isPromise<T = any>(obj: any): obj is Promise<T> {
   return (
     !!obj &&
     (typeof obj === 'object' || typeof obj === 'function') &&
@@ -60,6 +92,7 @@ export class RPCClient {
         // 不是符合规范的 message
         return;
       }
+
       const [messageId, errorOrMethod, resultOrPayload] = msg;
       if (!messageId) {
         // 不是符合规范的 message
@@ -108,11 +141,16 @@ export class RPCClient {
     });
   }
 
-  private _constructAnswer(messageId: string, error: any, result?: any) {
+  private _constructAnswer(
+    messageId: string,
+    error: Error,
+    result?: any,
+  ): TResponseMessage {
     const answerId = kResponsePrefix + messageId;
     if (error) {
-      this.logger.error('Worker caught an error:', error);
-      return [answerId, { message: error.message }, null];
+      this.logger.error('RPCClient caught an error:', error);
+
+      return [answerId, serializeError(error), null];
     } else {
       return [answerId, null, result];
     }
@@ -120,7 +158,7 @@ export class RPCClient {
 
   private _functions: Record<string, any> = {};
 
-  on(_method: string, cb: (msg: any) => any): IDisposable {
+  on(_method: string, cb: (...args: any[]) => any): IDisposable {
     if (typeof cb === 'function') {
       this._functions[_method] = cb;
     }
@@ -134,16 +172,17 @@ export class RPCClient {
 
   private execFn(messageId: string, fn: any, payload: any) {
     let result = null;
+    let error: Error | null = null;
     try {
-      const callbackResult = fn.apply(undefined, payload);
-      result = { res: callbackResult };
+      result = fn.apply(undefined, payload);
     } catch (e) {
-      result = { err: e };
+      error = e;
     }
-    if (result.err) {
-      this.postMessage(this._constructAnswer(messageId, result.err));
-    } else if (isPromise(result.res)) {
-      result.res
+
+    if (error) {
+      this.postMessage(this._constructAnswer(messageId, error));
+    } else if (isPromise(result)) {
+      result
         .then((res) =>
           this.postMessage(this._constructAnswer(messageId, null, res)),
         )
@@ -151,7 +190,7 @@ export class RPCClient {
           this.postMessage(this._constructAnswer(messageId, err)),
         );
     } else {
-      this.postMessage(this._constructAnswer(messageId, null, result.res));
+      this.postMessage(this._constructAnswer(messageId, null, result));
     }
   }
 

@@ -3,15 +3,20 @@
   "packageManager": "yarn@3.6.3",
   "private": true,
   "scripts": {
-    "build": "lerna run build"
+    "build": "lerna run build",
+    "test": "jest"
   },
   "workspaces": [
     "packages/*"
   ],
   "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.7.0",
     "esbuild": "^0.19.2",
     "glob": "^10.3.4",
+    "jest": "^29.7.0",
     "lerna": "^7.2.0",
-    "prettier": "^3.0.3"
+    "prettier": "^3.0.3",
+    "ts-jest": "^29.1.1"
   }
 }
