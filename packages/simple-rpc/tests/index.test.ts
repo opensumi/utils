@@ -55,10 +55,17 @@ describe('simple-rpc', () => {
     });
 
     c2.on('add', async (a: number, b: number) => {
-      throw new Error('error');
+      const err = new Error('error');
+      err.cause = new Error('cause');
+
+      throw err;
     });
 
-    expect(c1.invoke('add', 1, 2)).rejects.toThrow('error');
+    expect(c1.invoke('add', 1, 2)).rejects.toThrow(
+      new Error('error', {
+        cause: new Error('cause'),
+      }),
+    );
 
     channel.port1.close();
     channel.port2.close();

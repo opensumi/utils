@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
-    "types": ["jest", "node"]
+    "lib": ["ES2023", "DOM"],
+    "types": ["jest", "node"],
+    "target": "es2022"
   }
 }
