@@ -1,4 +1,8 @@
-import { ProtocolBuilder } from '../src/protocol-builder';
+import {
+  ProtocolBuilder,
+  serialize,
+  deserialize,
+} from '../src/protocol-builder';
 
 describe('protocol builder', () => {
   it('should work', async () => {
@@ -52,6 +56,32 @@ describe('protocol builder', () => {
     const data2 = reader(buffer);
     console.log(data2);
 
+    expect(data2).toEqual(data);
+  });
+
+  it('can serialize and deserialize', async () => {
+    const data = [
+      'hello',
+      Buffer.from('world'),
+      8,
+      65535,
+      4294967295,
+      { hello: 'world' },
+      15779779462787834424n,
+      [
+        'hello',
+        Buffer.from('world'),
+        8,
+        65535,
+        4294967295,
+        { hello: 'world' },
+        15779779462787834424n,
+      ],
+    ];
+
+    const buffer = serialize(data);
+    console.log(buffer);
+    const data2 = deserialize(buffer);
     expect(data2).toEqual(data);
   });
 });

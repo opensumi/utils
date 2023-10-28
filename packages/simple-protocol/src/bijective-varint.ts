@@ -1,5 +1,4 @@
 // Modified from https://github.com/josephg/bijective-varint-js/blob/main/index.ts
-// - modified some functions to use offset as a parameter
 //
 // This file contains routines to do length-prefixed varint encoding. I'd use LEB128 but this should
 // optimize better because it plays better with branch predictor. (Well, although this isn't an
@@ -25,6 +24,8 @@
 // 0x1111_1111 1111_1111 0xxx_xxxx ...
 // And for 128 bits:
 // 0x1111_1111 1111_1111 1111_1111 1111_1111 0xxx_xxxx ...
+
+import type { BufferWriter } from './buffer';
 
 const assert = (a: boolean, msg?: string) => {
   if (!a) throw Error(msg ?? 'Assertion failed');
@@ -60,7 +61,6 @@ export function bytesUsed(bytes: Uint8Array, offset = 0): number {
     (bytes[offset + 1] << 16) |
     (bytes[offset + 2] << 8) |
     bytes[offset + 3];
-  // console.log('x', ~x, (~x).toString(2).padStart(32, '.'), Math.clz32(~x))
   return Math.clz32(~x) + 1;
 }
 
@@ -122,23 +122,6 @@ for (let i = 1; i < 7; i++) {
 VARINT_ENC_CUTOFFS.push(Number.MAX_VALUE);
 
 /**
- * Encode the given unsigned number as a varint. Returns the varint in a Uint8Array.
- *
- * This method is a wrapper around `encodeInto`. If you're encoding into
- * a buffer, its more efficient to use `encodeInto` directly to avoid
- * the unnecessary Uint8Array allocation here and the copy into the destination
- * buffer.
- *
- * NOTE: This method uses unsigned varint encoding. If you want to encode a signed
- * number, call encode(zigzagEncode(num)).
- */
-export function encode(num: number): Uint8Array {
-  const result = new Uint8Array(MAX_INT_LEN);
-  const bytesUsed = encodeInto(num, result, 0);
-  return result.slice(0, bytesUsed);
-}
-
-/**
  * Encode the specified unsigned number into varint encoding, into the provided
  * Uint8Array at the specified offset. Returns number of bytes consumed in dest.
  * The passed array must have enough capacity for MAX_INT_LEN bytes (9 bytes).
@@ -148,10 +131,9 @@ export function encode(num: number): Uint8Array {
  * NOTE: This method only handles unsigned integers. Use zigzag encoding for signed
  * integers before passing your number into this method. Eg encodeInto(zigzagEncode(num), ..)
  **/
-export function encodeInto(
+export function encodeIntoBufferWriter(
   num: number,
-  dest: Uint8Array,
-  offset: number,
+  bufferWriter: BufferWriter,
 ): number {
   if (num > Number.MAX_SAFE_INTEGER)
     throw Error('Cannot encode integers above MAX_SAFE_INTEGER');
@@ -161,22 +143,23 @@ export function encodeInto(
   for (let i = 0; i < VARINT_ENC_CUTOFFS.length; i++) {
     if (num < VARINT_ENC_CUTOFFS[i]) {
       if (i > 0) num -= VARINT_ENC_CUTOFFS[i - 1];
-      // console.log('num', num, 'prefix', prefix)
 
-      // console.log('i', i, 'prefix', prefix)
+      const offset = bufferWriter.offset;
       for (let j = i; j > 0; j--) {
-        dest[offset + j] = num & 0xff;
+        bufferWriter.offset = offset + j;
+        bufferWriter.writeUInt8(num & 0xff);
         // I'd rather bitshift, but that coerces to a u32.
         // num >>= 8
         num = Math.floor(num / 256);
       }
       assert((prefix & num) === 0); // Must never have overlapping bits.
       assert(num >= 0);
-      dest[offset] = prefix | num;
 
+      bufferWriter.offset = offset;
+      bufferWriter.writeUInt8(prefix | num);
+      bufferWriter.offset = offset + i + 1;
       return i + 1;
     }
-    // prefix = (prefix << 1) + 2
     prefix = (prefix >> 1) + 0x80;
   }
   throw Error('unreachable');
@@ -225,25 +208,8 @@ for (let i = 1; i < 19; i++) {
     (VARINT_ENC_CUTOFFS_BIGINT[i - 1] + 1n) * common_mult_n;
 }
 
-/**
- * Encode the given bigint as a varint. Returns the encoded number in a Uint8Array.
- *
- * This method is a wrapper around `encodeIntoBN`. If you're encoding into
- * a buffer, its more efficient to use `encodeIntoBN` directly to avoid
- * the unnecessary Uint8Array allocation here and the copy into the destination
- * buffer.
- *
- * NOTE: This method uses unsigned varint encoding. If you want to encode a signed
- * number, call encodeBN(zigzagEncodeBN(num)).
- */
-export function encodeBN(num: bigint): Uint8Array {
-  const result = new Uint8Array(MAX_BIGINT_LEN);
-  const bytesUsed = encodeIntoBN(num, result, 0);
-  return result.slice(0, bytesUsed);
-}
-
 /** The largest unsigned bigint we can encode (2^128 - 1) */
-export const MAX_SAFE_BIGINT = 2n ** 128n - 1n;
+export const getMaxSafeBigInt = () => 2n ** 128n - 1n;
 
 /**
  * Encode the specified unsigned bigint into varint encoding, into the provided
@@ -258,19 +224,17 @@ export const MAX_SAFE_BIGINT = 2n ** 128n - 1n;
  * will fail (throw an exception) if you pass a number which does not fit within
  * the safe range.
  **/
-export function encodeIntoBN(
+export function encodeIntoBNBufferWriter(
   num: bigint,
-  dest: Uint8Array,
-  offset: number,
+  bufferWriter: BufferWriter,
 ): number {
   if (num < 0n) throw Error('Varint encoding: Number must be non-negative');
   // When we can, its faster to immediately convert to a Number rather than deal with BigInts.
   if (num < Number.MAX_SAFE_INTEGER)
-    return encodeInto(Number(num), dest, offset);
-  if (num > MAX_SAFE_BIGINT)
+    return encodeIntoBufferWriter(Number(num), bufferWriter);
+  if (num > getMaxSafeBigInt())
     throw Error('Cannot encode unsigned integers above 2^128'); // Could support them pretty easily tho.
 
-  // let prefix = 0
   for (let i = 0; i < VARINT_ENC_CUTOFFS_BIGINT.length; i++) {
     if (num < VARINT_ENC_CUTOFFS_BIGINT[i]) {
       if (i > 0) num -= VARINT_ENC_CUTOFFS_BIGINT[i - 1];
@@ -281,22 +245,21 @@ export function encodeIntoBN(
       // Prefix always fits in a normal int.
       let leadingOnes = i;
       for (; leadingOnes >= 8; leadingOnes -= 8) {
-        dest[offset++] = 0xff;
+        bufferWriter.writeUInt8(0xff);
       }
 
       // & 0xff is only here to make the number positive, but its not necessary.
       const prefix = (0xff << (8 - leadingOnes)) & 0xff;
       const trailingBits = i * 7 + leadingOnes;
-      // console.log('prefix', prefix.toString(2), num >> BigInt(trailingBits), BigInt.asUintN(8, num >> BigInt(trailingBits)).toString(2))
 
       // I'm filling the buffer left to right here,
       // but it might be faster / better to fill it right to left?
-      dest[offset++] = prefix | Number(num >> BigInt(trailingBits));
+      bufferWriter.writeUInt8(prefix | Number(num >> BigInt(trailingBits)));
       assert(trailingBits % 8 === 0);
 
       for (let j = trailingBits - 8; j >= 0; j -= 8) {
         // Using BigInt.asUintN here to truncate so we don't overflow the Number. Could equally (x & 0xffn).
-        dest[offset++] = Number(BigInt.asUintN(8, num >> BigInt(j)));
+        bufferWriter.writeUInt8(Number(BigInt.asUintN(8, num >> BigInt(j))));
       }
       return i + 1; // i+1 === change in offset.
     }
@@ -321,7 +284,6 @@ export function decodeBN(bytes: Uint8Array, baseOffset = 0): [bigint, number] {
   if ((b0 & 0b1000_0000) === 0) return [BigInt(b0), 1];
   const numBytes = bytesUsed(bytes, baseOffset);
   assert(numBytes >= 2);
-  // console.log('numBytes', numBytes)
 
   if (bytes.length < numBytes) throw Error('Unexpected end of input');
 
@@ -334,12 +296,10 @@ export function decodeBN(bytes: Uint8Array, baseOffset = 0): [bigint, number] {
     ++offset;
   }
 
-  // let val = b0 & ((1 << (9 - numBytes)) - 1)
   let val = BigInt(bytes[baseOffset + offset++] & (0xff >> b));
-  // console.log('v0', val)
+
   for (; offset < numBytes; ++offset) {
     val = val * 256n + BigInt(bytes[baseOffset + offset]);
-    // console.log('v', val)
   }
 
   val += VARINT_ENC_CUTOFFS_BIGINT[numBytes - 2];

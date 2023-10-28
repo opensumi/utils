@@ -6,40 +6,77 @@ if (typeof Buffer === 'undefined') {
 
 import {
   decode,
-  encodeInto,
   bytesUsed as bytesUsedFunc,
-  encodeIntoBN,
   decodeBN,
+  encodeIntoBufferWriter,
+  encodeIntoBNBufferWriter,
 } from './bijective-varint';
 
 export class BufferWriter {
+  buffer: Buffer;
   constructor(
-    public buffer: Buffer,
+    bufferOrUint8: Buffer | Uint8Array,
     public offset = 0,
-  ) {}
+  ) {
+    if (Buffer.isBuffer(bufferOrUint8)) {
+      this.buffer = bufferOrUint8;
+    } else {
+      this.buffer = Buffer.from(
+        bufferOrUint8,
+        bufferOrUint8.byteOffset,
+        bufferOrUint8.byteLength,
+      );
+    }
+  }
+
+  make() {
+    return sliceBuffer(this.buffer, 0, this.offset);
+  }
+
+  allocate(bytes: number) {
+    const targetSize = this.offset + bytes;
+    let size = this.buffer.length;
+
+    // if we have enough space, do nothing
+    if (targetSize <= size) {
+      return;
+    }
+    while (size < targetSize) {
+      size *= 2;
+    }
+    // otherwise, allocate a new buffer
+    const newBuffer = allocateBuffer(size);
+    // copy the old buffer into the new buffer
+    this.buffer.copy(newBuffer);
+    // set the new buffer
+    this.buffer = newBuffer;
+  }
 
   writeUInt8(value: number) {
+    this.allocate(1);
     this.buffer.writeUInt8(value, this.offset);
     this.offset += 1;
   }
 
   writeUInt16BE(value: number) {
+    this.allocate(2);
     this.buffer.writeUInt16BE(value, this.offset);
     this.offset += 2;
   }
 
   writeUInt32BE(value: number) {
+    this.allocate(4);
     this.buffer.writeUInt32BE(value, this.offset);
     this.offset += 4;
   }
 
   writeUIntVar(value: number) {
-    const bytesUsed = encodeInto(value, this.buffer, this.offset);
-    this.offset += bytesUsed;
+    encodeIntoBufferWriter(value, this);
   }
 
   writeBuffer(value: Buffer) {
     this.writeUIntVar(value.length);
+    this.allocate(value.length);
     this.buffer.set(value, this.offset);
     this.offset += value.length;
   }
@@ -50,8 +87,7 @@ export class BufferWriter {
   }
 
   writeBigInt(value: bigint) {
-    const bytesUsed = encodeIntoBN(value, this.buffer, this.offset);
-    this.offset += bytesUsed;
+    encodeIntoBNBufferWriter(value, this);
   }
 }
 
@@ -114,6 +150,10 @@ export function allocateBuffer(size: number) {
   return Buffer.allocUnsafe(size);
 }
 
-export function sliceBuffer(buffer: Buffer, start: number, end: number) {
+export function sliceBuffer(
+  buffer: Buffer,
+  start: number,
+  end: number,
+): Buffer {
   return Uint8Array.prototype.slice.call(buffer, start, end);
 }

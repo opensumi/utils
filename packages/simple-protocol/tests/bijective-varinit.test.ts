@@ -1,18 +1,21 @@
 import fs from 'node:fs';
 import {
-  encode,
   bytesUsed,
   decode,
   zigzagEncode,
   zigzagDecode,
-  encodeBN,
   decodeBN,
   zigzagDecodeBN,
   zigzagEncodeBN,
   bufContainsVarint,
+  MAX_BIGINT_LEN,
+  encodeIntoBNBufferWriter,
+  MAX_INT_LEN,
+  encodeIntoBufferWriter,
 } from '../src/bijective-varint';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
+import { BufferWriter } from '../src/buffer';
 
 // Helper function while debugging.
 const printBinary = (x: Uint8Array) => {
@@ -49,6 +52,46 @@ const roundtripUint = (n: number) => {
 
   roundtripBN(BigInt(n));
 };
+
+/**
+ * Encode the given unsigned number as a varint. Returns the varint in a Uint8Array.
+ *
+ * This method is a wrapper around `encodeInto`. If you're encoding into
+ * a buffer, its more efficient to use `encodeInto` directly to avoid
+ * the unnecessary Uint8Array allocation here and the copy into the destination
+ * buffer.
+ *
+ * NOTE: This method uses unsigned varint encoding. If you want to encode a signed
+ * number, call encode(zigzagEncode(num)).
+ */
+export function encode(num: number): Uint8Array {
+  const result = new Uint8Array(MAX_INT_LEN);
+  const bufferWriter = new BufferWriter(result);
+  const bytesUsed = encodeIntoBufferWriter(num, bufferWriter);
+  const out = new Uint8Array(bytesUsed);
+  out.set(bufferWriter.make());
+  return out;
+}
+
+/**
+ * Encode the given bigint as a varint. Returns the encoded number in a Uint8Array.
+ *
+ * This method is a wrapper around `encodeIntoBN`. If you're encoding into
+ * a buffer, its more efficient to use `encodeIntoBN` directly to avoid
+ * the unnecessary Uint8Array allocation here and the copy into the destination
+ * buffer.
+ *
+ * NOTE: This method uses unsigned varint encoding. If you want to encode a signed
+ * number, call encodeBN(zigzagEncodeBN(num)).
+ */
+export function encodeBN(num: bigint): Uint8Array {
+  const result = new Uint8Array(MAX_BIGINT_LEN);
+  const bufferWriter = new BufferWriter(result);
+  const bytesUsed = encodeIntoBNBufferWriter(num, bufferWriter);
+  const out = new Uint8Array(bytesUsed);
+  out.set(bufferWriter.make());
+  return out;
+}
 
 const roundtripBN = (n: bigint) => {
   // console.log('\nx', n)
@@ -122,10 +165,6 @@ describe('bijective varinit', () => {
       .reverse();
 
     for (const line of tests) {
-      console.log(
-        `🚀 ~ file: bijective-varinit.test.ts:124 ~ it ~ line:`,
-        line,
-      );
       let spaceIdx = line.indexOf(' ');
       expect(spaceIdx).toBeGreaterThan(0);
 
