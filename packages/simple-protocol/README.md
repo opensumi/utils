@@ -1,1 +1,1 @@
-# @opensumi/simple-rpc
+# @opensumi/simple-protocol
