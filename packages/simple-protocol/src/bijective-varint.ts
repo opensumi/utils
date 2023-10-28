@@ -1,5 +1,5 @@
 // Modified from https://github.com/josephg/bijective-varint-js/blob/main/index.ts
-// - modified `encode` and `decode` implementation
+// - modified some functions to use offset as a parameter
 //
 // This file contains routines to do length-prefixed varint encoding. I'd use LEB128 but this should
 // optimize better because it plays better with branch predictor. (Well, although this isn't an
@@ -49,13 +49,17 @@ export const MAX_BIGINT_LEN = 19;
  * Assuming the start of a Uint8Array contains a varint, this method return the number of bytes
  * the varint takes up
  */
-export function bytesUsed(bytes: Uint8Array): number {
+export function bytesUsed(bytes: Uint8Array, offset = 0): number {
   // Pull out the first 4 bytes. We'll never encode a number larger than 2^128 with this
   // encoder, but that gives us up to 3 bytes with 1 bits in them.
 
   // The input byte array might be smaller than 4 bytes long - but bit shift coerces undefined
   // to 0, so conveniently enough, this works fine anyway.
-  const x = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+  const x =
+    (bytes[offset] << 24) |
+    (bytes[offset + 1] << 16) |
+    (bytes[offset + 2] << 8) |
+    bytes[offset + 3];
   // console.log('x', ~x, (~x).toString(2).padStart(32, '.'), Math.clz32(~x))
   return Math.clz32(~x) + 1;
 }
@@ -207,10 +211,6 @@ export function decode(
 
   val += VARINT_ENC_CUTOFFS[numBytes - 2];
 
-  console.log(
-    `🚀 ~ file: bijective-varint.ts:208 ~ decode ~ numBytes:`,
-    numBytes,
-  );
   return [val, numBytes];
 }
 
@@ -314,12 +314,12 @@ export function encodeIntoBN(
  * Callers must ensure the entire number is ready in the buffer before calling
  * this method.
  */
-export function decodeBN(bytes: Uint8Array): bigint {
+export function decodeBN(bytes: Uint8Array, baseOffset = 0): [bigint, number] {
   if (bytes.length === 0) throw Error('Unexpected end of input');
 
-  const b0 = bytes[0];
-  if ((b0 & 0b1000_0000) === 0) return BigInt(b0);
-  const numBytes = bytesUsed(bytes);
+  const b0 = bytes[baseOffset];
+  if ((b0 & 0b1000_0000) === 0) return [BigInt(b0), 1];
+  const numBytes = bytesUsed(bytes, baseOffset);
   assert(numBytes >= 2);
   // console.log('numBytes', numBytes)
 
@@ -335,16 +335,16 @@ export function decodeBN(bytes: Uint8Array): bigint {
   }
 
   // let val = b0 & ((1 << (9 - numBytes)) - 1)
-  let val = BigInt(bytes[offset++] & (0xff >> b));
+  let val = BigInt(bytes[baseOffset + offset++] & (0xff >> b));
   // console.log('v0', val)
   for (; offset < numBytes; ++offset) {
-    val = val * 256n + BigInt(bytes[offset]);
+    val = val * 256n + BigInt(bytes[baseOffset + offset]);
     // console.log('v', val)
   }
 
   val += VARINT_ENC_CUTOFFS_BIGINT[numBytes - 2];
 
-  return val;
+  return [val, numBytes];
 }
 
 /** Zigzag encode a signed integer in a number into an unsigned integer */

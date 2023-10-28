@@ -53,11 +53,12 @@ const roundtripUint = (n: number) => {
 const roundtripBN = (n: bigint) => {
   // console.log('\nx', n)
   const encoded = encodeBN(n);
-  const decoded = decodeBN(encoded);
+  const [decoded, _bytesUsed] = decodeBN(encoded);
   expect(decoded).toBe(n);
 
   // Check that the number of bytes used makes sense.
   expect(bytesUsed(encoded)).toBe(encoded.byteLength);
+  expect(_bytesUsed).toBe(encoded.byteLength);
 
   // Check that hasEnoughBytesForVarint returns the right thing too.
   expect(bufContainsVarint(encoded)).toBeTruthy();

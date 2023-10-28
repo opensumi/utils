@@ -8,6 +8,8 @@ import {
   decode,
   encodeInto,
   bytesUsed as bytesUsedFunc,
+  encodeIntoBN,
+  decodeBN,
 } from './bijective-varint';
 
 export class BufferWriter {
@@ -45,6 +47,11 @@ export class BufferWriter {
   writeString(value: string) {
     const bytes = Buffer.from(value, 'utf8');
     this.writeBuffer(bytes);
+  }
+
+  writeBigInt(value: bigint) {
+    const bytesUsed = encodeIntoBN(value, this.buffer, this.offset);
+    this.offset += bytesUsed;
   }
 }
 
@@ -94,6 +101,12 @@ export class BufferReader {
   readString() {
     const bytes = this.readBuffer();
     return bytes.toString('utf8');
+  }
+
+  readBigInt() {
+    const [value, bytesUsed] = decodeBN(this.buffer, this.offset);
+    this.offset += bytesUsed;
+    return value;
   }
 }
 

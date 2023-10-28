@@ -12,6 +12,7 @@ export const ProtocolType = {
   UInt16: 3,
   UInt32: 4,
   JSONObject: 5,
+  BigInt: 6,
 } as const;
 
 export interface ProtocolDeclaration {
@@ -55,6 +56,20 @@ export class ProtocolBuilder {
           functions.push((reader) => {
             reader.readUInt8();
             return reader.readUInt32BE();
+          });
+          break;
+        case 'JSONObject':
+          functions.push((reader) => {
+            reader.readUInt8();
+            const buffer = reader.readBuffer();
+            const json = buffer.toString('utf8');
+            return JSON.parse(json);
+          });
+          break;
+        case 'BigInt':
+          functions.push((reader) => {
+            reader.readUInt8();
+            return reader.readBigInt();
           });
           break;
         default:
@@ -113,6 +128,13 @@ export class ProtocolBuilder {
             const buffer = JSON.stringify(data);
             writer.writeBuffer(Buffer.from(buffer, 'utf8'));
           });
+          break;
+        case 'BigInt':
+          functions.push((writer, data: any) => {
+            writer.writeUInt8(ProtocolType.BigInt);
+            writer.writeBigInt(data);
+          });
+          break;
         default:
           throw new Error(`Unknown type ${decl.type}`);
       }
