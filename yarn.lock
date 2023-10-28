@@ -1328,8 +1328,6 @@ __metadata:
 "@opensumi/simple-protocol@workspace:packages/simple-protocol":
   version: 0.0.0-use.local
   resolution: "@opensumi/simple-protocol@workspace:packages/simple-protocol"
-  dependencies:
-    varintes: ^2.0.5
   languageName: unknown
   linkType: soft
 
@@ -7139,13 +7137,6 @@ __metadata:
   dependencies:
     builtins: ^1.0.3
   checksum: ce4c68207abfb22c05eedb09ff97adbcedc80304a235a0844f5344f1fd5086aa80e4dbec5684d6094e26e35065277b765c1caef68bcea66b9056761eddb22967
-  languageName: node
-  linkType: hard
-
-"varintes@npm:^2.0.5":
-  version: 2.0.5
-  resolution: "varintes@npm:2.0.5"
-  checksum: a491a29fc2b6d8b91896af9225eded84921097290bc3c4fae018954b1fd502cdbf448260b389f18633bd0c156d8dbad7198e776c03a7a887fd64c05c5ba7794d
   languageName: node
   linkType: hard
 
