@@ -1,0 +1,25 @@
+{
+  "name": "@opensumi/simple-protocol",
+  "version": "0.0.3",
+  "files": [
+    "lib/**/*.js",
+    "esm/**/*.js",
+    "types/**",
+    "bin/**",
+    "src/**"
+  ],
+  "main": "lib/index.js",
+  "module": "esm/index.js",
+  "types": "types/index.d.ts",
+  "source": "src/index.ts",
+  "scripts": {
+    "prepublishOnly": "yarn build",
+    "build": "node ../../scripts/build.mjs && tsc -p tsconfig.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "varintes": "^2.0.5"
+  }
+}
