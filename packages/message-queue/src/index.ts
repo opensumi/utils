@@ -4,6 +4,7 @@ export interface MessageQueueOptions<T> {
   flushTimeout?: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint, @typescript-eslint/no-explicit-any
 export class MessageQueue<T extends any> {
   private _queue: T[] = [];
   private _flushing = false;
@@ -29,6 +30,10 @@ export class MessageQueue<T extends any> {
       return;
     }
     this._flush();
+  }
+
+  getQueue() {
+    return this._queue;
   }
 
   private _flush() {
