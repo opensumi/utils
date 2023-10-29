@@ -1,9 +1,12 @@
 import { BufferWriter, allocateBuffer, BufferReader } from './buffer';
 import { ProtocolType } from './protocol-builder';
 
-function serializeWorker(data: any, writer: BufferWriter) {
+function serializeWorker(data: unknown, writer: BufferWriter) {
   if (typeof data === 'undefined') {
     writer.writeUInt8(ProtocolType.Undefined);
+  } else if (typeof data === 'boolean') {
+    writer.writeUInt8(ProtocolType.Boolean);
+    writer.writeUInt8(data ? 1 : 0);
   } else if (typeof data === 'bigint') {
     writer.writeUInt8(ProtocolType.BigInt);
     writer.writeBigInt(data);
@@ -28,7 +31,7 @@ function serializeWorker(data: any, writer: BufferWriter) {
   }
 }
 
-export function serialize(data: any) {
+export function serialize(data: unknown) {
   const buffer = allocateBuffer(1024 * 1024);
   const writer = new BufferWriter(buffer);
 
@@ -61,12 +64,14 @@ function deserializeWorker(reader: BufferReader) {
       return reader.readBigInt();
     case ProtocolType.Array: {
       const length = reader.readUIntVar();
-      const data = [] as any[];
+      const data = [] as unknown[];
       for (let i = 0; i < length; i++) {
         data.push(deserializeWorker(reader));
       }
       return data;
     }
+    case ProtocolType.Boolean:
+      return reader.readUInt8() === 1;
     default:
       throw new Error(`Unknown type ${type}`);
   }

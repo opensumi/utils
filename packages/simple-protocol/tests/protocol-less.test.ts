@@ -20,6 +20,8 @@ describe('protocol less', () => {
         15779779462787834424n,
       ],
       undefined,
+      true,
+      false,
     ];
 
     const buffer = serialize(data);

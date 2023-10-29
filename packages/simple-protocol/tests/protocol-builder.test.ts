@@ -88,6 +88,10 @@ describe('protocol builder', () => {
               name: 'aaa',
               type: 'String',
             },
+            {
+              name: 'bool',
+              type: 'Boolean',
+            },
           ],
         },
       ],
@@ -117,6 +121,7 @@ describe('protocol builder', () => {
       testArray: ['hello', 'world'],
       testNestObject: {
         aaa: 'hello',
+        bool: true,
       },
     };
     const buffer = writer(data);

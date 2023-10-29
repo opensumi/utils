@@ -12,6 +12,7 @@ export const ProtocolType = {
   Union: 8,
   Object: 9,
   Undefined: 10,
+  Boolean: 11,
 } as const;
 
 export interface BaseProtocolDeclaration {
@@ -53,11 +54,14 @@ export interface ICompileWriterOptions {
   initialAllocSize?: number;
 }
 
-export type ProtocolWrite<T = any> = (writer: BufferWriter, data: T) => void;
-export type ProtocolRead<T = any> = (reader: BufferReader) => T;
+export type ProtocolWrite<T = unknown> = (
+  writer: BufferWriter,
+  data: T,
+) => void;
+export type ProtocolRead<T = unknown> = (reader: BufferReader) => T;
 
 class WriteTypeError extends Error {
-  constructor(decl: ProtocolDeclaration, value: any) {
+  constructor(decl: ProtocolDeclaration, value: unknown) {
     super(`Field(${decl.name}): Expected ${decl.type}, got ${typeof value}`);
   }
 }
@@ -65,7 +69,7 @@ class WriteTypeError extends Error {
 const assertWriteType = (
   bool: boolean,
   decl: ProtocolDeclaration,
-  value: any,
+  value: unknown,
 ) => {
   if (!bool) {
     throw new WriteTypeError(decl, value);
@@ -117,14 +121,14 @@ export class ProtocolBuilder {
         };
         break;
       case 'JSONObject':
-        fn = (writer, data: any) => {
+        fn = (writer, data: unknown) => {
           assertWriteType(typeof data === 'object', decl, data);
           const buffer = JSON.stringify(data);
           writer.writeBuffer(Buffer.from(buffer, 'utf8'));
         };
         break;
       case 'BigInt':
-        fn = (writer, data: any) => {
+        fn = (writer, data: bigint) => {
           assertWriteType(typeof data === 'bigint', decl, data);
           writer.writeBigInt(data);
         };
@@ -133,7 +137,7 @@ export class ProtocolBuilder {
         const t = this.createWriteFuncWithDeclaration(
           (decl as ProtocolArrayDeclaration).element,
         );
-        fn = (writer, data: any[]) => {
+        fn = (writer, data: unknown[]) => {
           assertWriteType(Array.isArray(data), decl, data);
           writer.writeUIntVar(data.length);
           for (const element of data) {
@@ -148,7 +152,7 @@ export class ProtocolBuilder {
         for (const element of elements) {
           functions.push(this.createWriteFuncWithDeclaration(element));
         }
-        fn = (writer, data: any) => {
+        fn = (writer, data: unknown[]) => {
           assertWriteType(Array.isArray(data), decl, data);
 
           writer.writeUInt8(data.length);
@@ -167,7 +171,7 @@ export class ProtocolBuilder {
           const key = field.name;
           functions[key] = this.createWriteFuncWithDeclaration(field);
         }
-        fn = (writer, data: any) => {
+        fn = (writer, data: unknown) => {
           assertWriteType(typeof data === 'object', decl, data);
           writer.writeUInt8(Object.keys(functions).length);
           for (const key of Object.keys(data)) {
@@ -183,12 +187,18 @@ export class ProtocolBuilder {
         break;
       }
       case 'Undefined': {
-        fn = (writer, data: any) => {
+        fn = (writer, data: unknown) => {
           assertWriteType(typeof data === 'undefined', decl, data);
           writer.writeUInt8(0);
         };
         break;
       }
+      case 'Boolean':
+        fn = (writer, data: unknown) => {
+          assertWriteType(typeof data === 'boolean', decl, data);
+          writer.writeUInt8(data ? 1 : 0);
+        };
+        break;
       default:
         throw new Error(
           `${(decl as ProtocolDeclaration).name}: Unknown type ${
@@ -252,7 +262,7 @@ export class ProtocolBuilder {
         );
         fn = (reader) => {
           const length = reader.readUIntVar();
-          const data = [] as any[];
+          const data = [] as unknown[];
           for (let i = 0; i < length; i++) {
             data.push(t(reader));
           }
@@ -268,7 +278,7 @@ export class ProtocolBuilder {
         }
         fn = (reader) => {
           const length = reader.readUInt8();
-          const data = [] as any[];
+          const data = [] as unknown[];
           for (let i = 0; i < length; i++) {
             const func = functions[i];
             data.push(func(reader));
@@ -286,7 +296,7 @@ export class ProtocolBuilder {
         }
         fn = (reader) => {
           const length = reader.readUInt8();
-          const data = {} as Record<string, any>;
+          const data = {} as Record<string, unknown>;
           for (let i = 0; i < length; i++) {
             const key = reader.readString();
             const func = functions[key];
@@ -303,6 +313,12 @@ export class ProtocolBuilder {
         fn = (reader) => {
           reader.readUInt8();
           return undefined;
+        };
+        break;
+      }
+      case 'Boolean': {
+        fn = (reader) => {
+          return reader.readUInt8() === 1;
         };
         break;
       }
@@ -326,7 +342,7 @@ export class ProtocolBuilder {
     const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
     const writer = new BufferWriter(buffer);
 
-    return (data: any) => {
+    return (data: unknown) => {
       writer.offset = 0;
       func(writer, data);
       return writer.make();

@@ -18,6 +18,7 @@ import path from 'node:path';
 import { BufferWriter } from '../src/buffer';
 
 // Helper function while debugging.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const printBinary = (x: Uint8Array) => {
   console.log([...x].map((b) => b.toString(2).padStart(8, '0')).join(' '));
 };
@@ -189,7 +190,7 @@ describe('bijective varinit', () => {
       expect(actualBytes).toEqual(expectBytes);
       expect(_bytesUsed).toBe(actualBytes.length);
 
-      console.log(actualBytes, expectBytes);
+      // console.log(actualBytes, expectBytes);
     }
   });
 
