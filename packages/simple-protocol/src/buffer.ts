@@ -116,11 +116,6 @@ export class BufferReader {
   }
 
   readUIntVar() {
-    const byteUsed = bytesUsedFunc(this.buffer);
-    console.log(
-      `🚀 ~ file: buffer.ts:77 ~ BufferReader ~ readUIntVar ~ byteUsed:`,
-      byteUsed,
-    );
     const [value, bytesUsed] = decode(this.buffer, this.offset);
     this.offset += bytesUsed;
     return value;

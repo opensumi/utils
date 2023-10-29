@@ -5,7 +5,35 @@ import {
 } from '../src/protocol-builder';
 
 describe('protocol builder', () => {
-  it('should work', async () => {
+  it('Array should work', async () => {
+    const protocol = new ProtocolBuilder({
+      type: 'Array',
+      name: 'test',
+      element: {
+        type: 'String',
+        name: 'element',
+      },
+    });
+
+    const reader = protocol.compileReader();
+    const writer = protocol.compileWriter();
+
+    const data = ['hello', 'world'];
+
+    const buffer = writer(data);
+    console.log(buffer);
+
+    const data2 = reader(buffer);
+    console.log(data2);
+
+    expect(data2).toEqual(data);
+
+    const data3 = [...data, 1234];
+    expect(() => writer(data3)).toThrowError(
+      'Field(element): Expected String, got number',
+    );
+  });
+  it('Union should work', async () => {
     const protocol = new ProtocolBuilder({
       type: 'Union',
       name: 'test',

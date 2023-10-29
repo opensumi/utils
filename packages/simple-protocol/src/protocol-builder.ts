@@ -52,6 +52,22 @@ export interface IProtobolBuilderOptions {
 export type ProtocolWrite<T = any> = (writer: BufferWriter, data: T) => void;
 export type ProtocolRead<T = any> = (reader: BufferReader) => T;
 
+class WriteTypeError extends Error {
+  constructor(decl: ProtocolDeclaration, value: any) {
+    super(`Field(${decl.name}): Expected ${decl.type}, got ${typeof value}`);
+  }
+}
+
+const assertWriteType = (
+  bool: boolean,
+  decl: ProtocolDeclaration,
+  value: any,
+) => {
+  if (!bool) {
+    throw new WriteTypeError(decl, value);
+  }
+};
+
 export class ProtocolBuilder {
   compact: boolean;
   decl: ProtocolDeclaration;
@@ -67,37 +83,45 @@ export class ProtocolBuilder {
     switch (decl.type) {
       case 'String':
         fn = (writer, data: string) => {
+          assertWriteType(typeof data === 'string', decl, data);
           writer.writeString(data);
         };
         break;
       case 'Buffer':
         fn = (writer, data: Buffer) => {
+          assertWriteType(Buffer.isBuffer(data), decl, data);
           writer.writeBuffer(data);
         };
         break;
       case 'UInt8':
         fn = (writer, data: number) => {
+          assertWriteType(typeof data === 'number', decl, data);
+          // if data is not UInt8(0~255), Buffer write will throw
           writer.writeUInt8(data);
         };
         break;
       case 'UInt16':
         fn = (writer, data: number) => {
+          assertWriteType(typeof data === 'number', decl, data);
           writer.writeUInt16BE(data);
         };
         break;
       case 'UInt32':
         fn = (writer, data: number) => {
+          assertWriteType(typeof data === 'number', decl, data);
           writer.writeUInt32BE(data);
         };
         break;
       case 'JSONObject':
         fn = (writer, data: any) => {
+          assertWriteType(typeof data === 'object', decl, data);
           const buffer = JSON.stringify(data);
           writer.writeBuffer(Buffer.from(buffer, 'utf8'));
         };
         break;
       case 'BigInt':
         fn = (writer, data: any) => {
+          assertWriteType(typeof data === 'bigint', decl, data);
           writer.writeBigInt(data);
         };
         break;
@@ -106,9 +130,7 @@ export class ProtocolBuilder {
           (decl as ProtocolArrayDeclaration).element,
         );
         fn = (writer, data: any[]) => {
-          if (!Array.isArray(data)) {
-            throw new Error('Array must be an array');
-          }
+          assertWriteType(Array.isArray(data), decl, data);
           writer.writeUIntVar(data.length);
           for (const element of data) {
             t(writer, element);
@@ -123,9 +145,7 @@ export class ProtocolBuilder {
           functions.push(this.createWriteFuncWithDeclaration(element));
         }
         fn = (writer, data: any) => {
-          if (!Array.isArray(data)) {
-            throw new Error('Union must be an array');
-          }
+          assertWriteType(Array.isArray(data), decl, data);
 
           writer.writeUInt8(data.length);
           for (let i = 0; i < data.length; i++) {
@@ -144,9 +164,7 @@ export class ProtocolBuilder {
           functions[key] = this.createWriteFuncWithDeclaration(field);
         }
         fn = (writer, data: any) => {
-          if (typeof data !== 'object') {
-            throw new Error('Object must be an object');
-          }
+          assertWriteType(typeof data === 'object', decl, data);
           writer.writeUInt8(Object.keys(functions).length);
           for (const key of Object.keys(data)) {
             const fn = functions[key];
@@ -161,7 +179,7 @@ export class ProtocolBuilder {
         break;
       }
       default:
-        throw new Error(`Unknown type ${decl.type}`);
+        throw new Error(`${decl.name}: Unknown type ${decl.type}`);
     }
     return fn;
   }
@@ -170,8 +188,11 @@ export class ProtocolBuilder {
     decl: ProtocolDeclaration,
   ): ProtocolRead {
     let fn: ProtocolRead = () => {
-      throw new Error('Encountered unknown type');
+      throw new Error(
+        `${decl.name}: Encountered unknown type, expected ${decl.type}`,
+      );
     };
+
     switch (decl.type) {
       case 'String':
         fn = (reader) => {
