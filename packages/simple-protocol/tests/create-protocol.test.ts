@@ -6,36 +6,40 @@ import {
 
 describe('protocol builder', () => {
   it('should work', async () => {
-    const protocol = new ProtocolBuilder([
-      {
-        type: 'String',
-        name: 'type',
-      },
-      {
-        type: 'Buffer',
-        name: 'payload',
-      },
-      {
-        type: 'UInt8',
-        name: 'eight',
-      },
-      {
-        type: 'UInt16',
-        name: 'sixteen',
-      },
-      {
-        type: 'UInt32',
-        name: 'thirtytwo',
-      },
-      {
-        type: 'JSONObject',
-        name: 'json',
-      },
-      {
-        type: 'BigInt',
-        name: 'bigint',
-      },
-    ]);
+    const protocol = new ProtocolBuilder({
+      type: 'Union',
+      name: 'test',
+      elements: [
+        {
+          type: 'String',
+          name: 'type',
+        },
+        {
+          type: 'Buffer',
+          name: 'payload',
+        },
+        {
+          type: 'UInt8',
+          name: 'eight',
+        },
+        {
+          type: 'UInt16',
+          name: 'sixteen',
+        },
+        {
+          type: 'UInt32',
+          name: 'thirtytwo',
+        },
+        {
+          type: 'JSONObject',
+          name: 'json',
+        },
+        {
+          type: 'BigInt',
+          name: 'bigint',
+        },
+      ],
+    });
 
     const reader = protocol.compileReader();
     const writer = protocol.compileWriter();

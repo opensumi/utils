@@ -9,142 +9,281 @@ export const ProtocolType = {
   JSONObject: 5,
   BigInt: 6,
   Array: 7,
+  Union: 8,
+  Object: 9,
+  Undefined: 10,
 } as const;
 
-export interface ProtocolDeclaration {
+export interface BaseProtocolDeclaration {
   type: keyof typeof ProtocolType;
   name: string;
 }
 
+export interface ProtocolArrayDeclaration extends BaseProtocolDeclaration {
+  type: 'Array';
+  element: BaseProtocolDeclaration;
+}
+
+export interface ProtocolUnionDeclaration extends BaseProtocolDeclaration {
+  type: 'Union';
+  elements: BaseProtocolDeclaration[];
+}
+
+export interface ProtocolObjectDeclaration extends BaseProtocolDeclaration {
+  type: 'Object';
+  fields: BaseProtocolDeclaration[];
+}
+
+export type ProtocolDeclaration =
+  | BaseProtocolDeclaration
+  | ProtocolArrayDeclaration
+  | ProtocolObjectDeclaration
+  | ProtocolUnionDeclaration;
+
+export const noop = () => {};
+
+export interface IProtobolBuilderOptions {
+  /**
+   * If true, the buffer will remove the ProtocolType header.
+   */
+  compact?: boolean;
+}
+
+export type ProtocolWrite<T = any> = (writer: BufferWriter, data: T) => void;
+export type ProtocolRead<T = any> = (reader: BufferReader) => T;
+
 export class ProtocolBuilder {
-  constructor(public decls: ProtocolDeclaration[]) {}
+  compact: boolean;
+  decl: ProtocolDeclaration;
+  constructor(decls: ProtocolDeclaration, options?: IProtobolBuilderOptions) {
+    this.decl = decls;
+    this.compact = !!options?.compact;
+  }
 
-  compileReader() {
-    const functions = [] as ((reader: BufferReader) => any)[];
-
-    for (const decl of this.decls) {
-      switch (decl.type) {
-        case 'String':
-          functions.push((reader) => {
-            reader.readUInt8();
-            return reader.readString();
-          });
-          break;
-        case 'Buffer':
-          functions.push((reader) => {
-            reader.readUInt8();
-            return reader.readBuffer();
-          });
-          break;
-        case 'UInt8':
-          functions.push((reader) => {
-            reader.readUInt8();
-            return reader.readUInt8();
-          });
-          break;
-        case 'UInt16':
-          functions.push((reader) => {
-            reader.readUInt8();
-            return reader.readUInt16BE();
-          });
-          break;
-        case 'UInt32':
-          functions.push((reader) => {
-            reader.readUInt8();
-            return reader.readUInt32BE();
-          });
-          break;
-        case 'JSONObject':
-          functions.push((reader) => {
-            reader.readUInt8();
-            const buffer = reader.readBuffer();
-            const json = buffer.toString('utf8');
-            return JSON.parse(json);
-          });
-          break;
-        case 'BigInt':
-          functions.push((reader) => {
-            reader.readUInt8();
-            return reader.readBigInt();
-          });
-          break;
-        default:
-          throw new Error(`Unknown type ${decl.type}`);
+  private createWriteFuncWithDeclaration(
+    decl: ProtocolDeclaration,
+  ): ProtocolWrite {
+    let fn: ProtocolWrite = noop;
+    switch (decl.type) {
+      case 'String':
+        fn = (writer, data: string) => {
+          writer.writeString(data);
+        };
+        break;
+      case 'Buffer':
+        fn = (writer, data: Buffer) => {
+          writer.writeBuffer(data);
+        };
+        break;
+      case 'UInt8':
+        fn = (writer, data: number) => {
+          writer.writeUInt8(data);
+        };
+        break;
+      case 'UInt16':
+        fn = (writer, data: number) => {
+          writer.writeUInt16BE(data);
+        };
+        break;
+      case 'UInt32':
+        fn = (writer, data: number) => {
+          writer.writeUInt32BE(data);
+        };
+        break;
+      case 'JSONObject':
+        fn = (writer, data: any) => {
+          const buffer = JSON.stringify(data);
+          writer.writeBuffer(Buffer.from(buffer, 'utf8'));
+        };
+        break;
+      case 'BigInt':
+        fn = (writer, data: any) => {
+          writer.writeBigInt(data);
+        };
+        break;
+      case 'Array': {
+        const t = this.createWriteFuncWithDeclaration(
+          (decl as ProtocolArrayDeclaration).element,
+        );
+        fn = (writer, data: any[]) => {
+          if (!Array.isArray(data)) {
+            throw new Error('Array must be an array');
+          }
+          writer.writeUIntVar(data.length);
+          for (const element of data) {
+            t(writer, element);
+          }
+        };
+        break;
       }
-    }
+      case 'Union': {
+        const functions = [] as ProtocolWrite[];
+        const elements = (decl as ProtocolUnionDeclaration).elements;
+        for (const element of elements) {
+          functions.push(this.createWriteFuncWithDeclaration(element));
+        }
+        fn = (writer, data: any) => {
+          if (!Array.isArray(data)) {
+            throw new Error('Union must be an array');
+          }
 
+          writer.writeUInt8(data.length);
+          for (let i = 0; i < data.length; i++) {
+            const element = data[i];
+            const func = functions[i];
+            func(writer, element);
+          }
+        };
+        break;
+      }
+      case 'Object': {
+        const fields = (decl as ProtocolObjectDeclaration).fields;
+        const functions = {} as Record<string, ProtocolWrite>;
+        for (const field of fields) {
+          const key = field.name;
+          functions[key] = this.createWriteFuncWithDeclaration(field);
+        }
+        fn = (writer, data: any) => {
+          if (typeof data !== 'object') {
+            throw new Error('Object must be an object');
+          }
+          writer.writeUInt8(Object.keys(functions).length);
+          for (const key of Object.keys(data)) {
+            const fn = functions[key];
+            const value = data[key];
+            if (!fn) {
+              throw new Error(`Unknown key ${key}`);
+            }
+            writer.writeString(key);
+            fn(writer, value);
+          }
+        };
+        break;
+      }
+      default:
+        throw new Error(`Unknown type ${decl.type}`);
+    }
+    return fn;
+  }
+
+  private createReadFuncWithDeclaration(
+    decl: ProtocolDeclaration,
+  ): ProtocolRead {
+    let fn: ProtocolRead = () => {
+      throw new Error('Encountered unknown type');
+    };
+    switch (decl.type) {
+      case 'String':
+        fn = (reader) => {
+          return reader.readString();
+        };
+        break;
+      case 'Buffer':
+        fn = (reader) => {
+          return reader.readBuffer();
+        };
+        break;
+      case 'UInt8':
+        fn = (reader) => {
+          return reader.readUInt8();
+        };
+        break;
+      case 'UInt16':
+        fn = (reader) => {
+          return reader.readUInt16BE();
+        };
+        break;
+      case 'UInt32':
+        fn = (reader) => {
+          return reader.readUInt32BE();
+        };
+        break;
+      case 'JSONObject':
+        fn = (reader) => {
+          const buffer = reader.readBuffer();
+          const json = buffer.toString('utf8');
+          return JSON.parse(json);
+        };
+        break;
+      case 'BigInt':
+        fn = (reader) => {
+          return reader.readBigInt();
+        };
+        break;
+      case 'Array': {
+        const t = this.createReadFuncWithDeclaration(
+          (decl as ProtocolArrayDeclaration).element,
+        );
+        fn = (reader) => {
+          const length = reader.readUIntVar();
+          const data = [] as any[];
+          for (let i = 0; i < length; i++) {
+            data.push(t(reader));
+          }
+          return data;
+        };
+        break;
+      }
+      case 'Union': {
+        const functions = [] as ProtocolRead[];
+        const elements = (decl as ProtocolUnionDeclaration).elements;
+        for (const element of elements) {
+          functions.push(this.createReadFuncWithDeclaration(element));
+        }
+        fn = (reader) => {
+          const length = reader.readUInt8();
+          const data = [] as any[];
+          for (let i = 0; i < length; i++) {
+            const func = functions[i];
+            data.push(func(reader));
+          }
+          return data;
+        };
+        break;
+      }
+      case 'Object': {
+        const fields = (decl as ProtocolObjectDeclaration).fields;
+        const functions = {} as Record<string, ProtocolRead>;
+        for (const field of fields) {
+          const key = field.name;
+          functions[key] = this.createReadFuncWithDeclaration(field);
+        }
+        fn = (reader) => {
+          const length = reader.readUInt8();
+          const data = {} as Record<string, any>;
+          for (let i = 0; i < length; i++) {
+            const key = reader.readString();
+            const func = functions[key];
+            if (!func) {
+              throw new Error(`Unknown key ${key}`);
+            }
+            data[key] = func(reader);
+          }
+          return data;
+        };
+        break;
+      }
+      default:
+        throw new Error(`Unknown type ${decl.type}`);
+    }
+    return fn;
+  }
+  compileReader() {
+    const fn = this.createReadFuncWithDeclaration(this.decl);
     return (buffer: Buffer) => {
       const reader = new BufferReader(buffer);
-      const data = [] as any[];
-      for (const fn of functions) {
-        data.push(fn(reader));
-      }
+      const data = fn(reader);
       return data;
     };
   }
 
   compileWriter() {
-    const functions = [] as ((writer: BufferWriter, data: any) => void)[];
-
-    for (const decl of this.decls) {
-      switch (decl.type) {
-        case 'String':
-          functions.push((writer, data: string) => {
-            writer.writeUInt8(ProtocolType.String);
-            writer.writeString(data);
-          });
-          break;
-        case 'Buffer':
-          functions.push((writer, data: Buffer) => {
-            writer.writeUInt8(ProtocolType.Buffer);
-            writer.writeBuffer(data);
-          });
-          break;
-        case 'UInt8':
-          functions.push((writer, data: number) => {
-            writer.writeUInt8(ProtocolType.UInt8);
-            writer.writeUInt8(data);
-          });
-          break;
-        case 'UInt16':
-          functions.push((writer, data: number) => {
-            writer.writeUInt8(ProtocolType.UInt16);
-            writer.writeUInt16BE(data);
-          });
-          break;
-        case 'UInt32':
-          functions.push((writer, data: number) => {
-            writer.writeUInt8(ProtocolType.UInt32);
-            writer.writeUInt32BE(data);
-          });
-          break;
-        case 'JSONObject':
-          functions.push((writer, data: any) => {
-            writer.writeUInt8(ProtocolType.JSONObject);
-            const buffer = JSON.stringify(data);
-            writer.writeBuffer(Buffer.from(buffer, 'utf8'));
-          });
-          break;
-        case 'BigInt':
-          functions.push((writer, data: any) => {
-            writer.writeUInt8(ProtocolType.BigInt);
-            writer.writeBigInt(data);
-          });
-          break;
-        default:
-          throw new Error(`Unknown type ${decl.type}`);
-      }
-    }
-
-    return (data: any[]) => {
+    const func = this.createWriteFuncWithDeclaration(this.decl);
+    return (data: any) => {
       // 1m
       const buffer = allocateBuffer(1024 * 1024);
       const writer = new BufferWriter(buffer);
-      for (let i = 0; i < data.length; i++) {
-        const element = data[i];
-        const fn = functions[i];
-        fn(writer, element);
-      }
+      func(writer, data);
       return writer.make();
     };
   }
