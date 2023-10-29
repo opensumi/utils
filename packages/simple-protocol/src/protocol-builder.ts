@@ -289,10 +289,12 @@ export class ProtocolBuilder {
   }
 }
 
-export function serialize(data: any[]) {
+export function serialize(data: any) {
   const buffer = allocateBuffer(1024 * 1024);
   const writer = new BufferWriter(buffer);
-  if (typeof data === 'bigint') {
+  if (typeof data === 'undefined') {
+    writer.writeUInt8(ProtocolType.Undefined);
+  } else if (typeof data === 'bigint') {
     writer.writeUInt8(ProtocolType.BigInt);
     writer.writeBigInt(data);
   } else if (typeof data === 'number') {
@@ -327,6 +329,8 @@ export function deserialize(buffer: Buffer) {
 
   const type = reader.readUInt8();
   switch (type) {
+    case ProtocolType.Undefined:
+      return undefined;
     case ProtocolType.String:
       return reader.readString();
     case ProtocolType.Buffer:

@@ -81,6 +81,7 @@ describe('protocol builder', () => {
         { hello: 'world' },
         15779779462787834424n,
       ],
+      undefined,
     ];
 
     const buffer = serialize(data);
