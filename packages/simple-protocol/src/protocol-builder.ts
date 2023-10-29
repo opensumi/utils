@@ -49,6 +49,10 @@ export interface IProtobolBuilderOptions {
   compact?: boolean;
 }
 
+export interface ICompileWriterOptions {
+  initialAllocSize?: number;
+}
+
 export type ProtocolWrite<T = any> = (writer: BufferWriter, data: T) => void;
 export type ProtocolRead<T = any> = (reader: BufferReader) => T;
 
@@ -316,12 +320,14 @@ export class ProtocolBuilder {
     };
   }
 
-  compileWriter() {
+  compileWriter(options: ICompileWriterOptions = {}) {
     const func = this.createWriteFuncWithDeclaration(this.decl);
+    // 1m
+    const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
+    const writer = new BufferWriter(buffer);
+
     return (data: any) => {
-      // 1m
-      const buffer = allocateBuffer(1024 * 1024);
-      const writer = new BufferWriter(buffer);
+      writer.offset = 0;
       func(writer, data);
       return writer.make();
     };

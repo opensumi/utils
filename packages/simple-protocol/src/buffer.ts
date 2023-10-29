@@ -1,9 +1,3 @@
-if (typeof Buffer === 'undefined') {
-  // if this is running in the browser, we need to polyfill Buffer
-  // see: https://github.com/feross/buffer
-  global.Buffer = require('buffer/').Buffer;
-}
-
 import {
   decode,
   bytesUsed as bytesUsedFunc,
@@ -11,6 +5,12 @@ import {
   encodeIntoBufferWriter,
   encodeIntoBNBufferWriter,
 } from './bijective-varint';
+
+if (typeof Buffer === 'undefined') {
+  throw new Error(
+    '@opensumi/protocol: Buffer is not defined, please use a Buffer polyfill.',
+  );
+}
 
 export class BufferWriter {
   buffer: Buffer;
