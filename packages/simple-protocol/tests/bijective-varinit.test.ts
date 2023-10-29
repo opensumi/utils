@@ -53,6 +53,9 @@ const roundtripUint = (n: number) => {
   roundtripBN(BigInt(n));
 };
 
+const bufferWriter = new BufferWriter(new Uint8Array(MAX_INT_LEN));
+const bnBufferWriter = new BufferWriter(new Uint8Array(MAX_BIGINT_LEN));
+
 /**
  * Encode the given unsigned number as a varint. Returns the varint in a Uint8Array.
  *
@@ -65,8 +68,7 @@ const roundtripUint = (n: number) => {
  * number, call encode(zigzagEncode(num)).
  */
 export function encode(num: number): Uint8Array {
-  const result = new Uint8Array(MAX_INT_LEN);
-  const bufferWriter = new BufferWriter(result);
+  bufferWriter.offset = 0;
   const bytesUsed = encodeIntoBufferWriter(num, bufferWriter);
   const out = new Uint8Array(bytesUsed);
   out.set(bufferWriter.make());
@@ -85,11 +87,10 @@ export function encode(num: number): Uint8Array {
  * number, call encodeBN(zigzagEncodeBN(num)).
  */
 export function encodeBN(num: bigint): Uint8Array {
-  const result = new Uint8Array(MAX_BIGINT_LEN);
-  const bufferWriter = new BufferWriter(result);
-  const bytesUsed = encodeIntoBNBufferWriter(num, bufferWriter);
+  bnBufferWriter.offset = 0;
+  const bytesUsed = encodeIntoBNBufferWriter(num, bnBufferWriter);
   const out = new Uint8Array(bytesUsed);
-  out.set(bufferWriter.make());
+  out.set(bnBufferWriter.make());
   return out;
 }
 
