@@ -43,12 +43,8 @@ export class BufferWriter {
     while (size < targetSize) {
       size *= 2;
     }
-    // otherwise, allocate a new buffer
-    const newBuffer = allocateBuffer(size);
-    // copy the old buffer into the new buffer
-    this.buffer.copy(newBuffer);
-    // set the new buffer
-    this.buffer = newBuffer;
+
+    this.buffer = sliceBuffer(this.buffer, 0, this.offset, size);
   }
 
   writeUInt8(value: number) {
@@ -148,6 +144,12 @@ export function sliceBuffer(
   buffer: Buffer,
   start: number,
   end: number,
+  size?: number,
 ): Buffer {
-  return Uint8Array.prototype.slice.call(buffer, start, end);
+  size = size ?? end - start;
+  const buf = allocateBuffer(size);
+  for (let i = 0; i < size; i++) {
+    buf[i] = buffer[start + i];
+  }
+  return buf;
 }
