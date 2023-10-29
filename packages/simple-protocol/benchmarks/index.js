@@ -2,7 +2,6 @@
 
 const { ProtocolBuilder, serialize, deserialize } = require('..');
 const Benchmark = require('benchmark');
-const path = require('path');
 const assert = require('assert');
 
 const sample = {
@@ -221,6 +220,10 @@ const builder = new ProtocolBuilder({
 const furyAb = serialize(sample);
 const sampleJson = JSON.stringify(sample);
 
+const { encode: protoEncode, decode: protoDecode } = loadProto();
+
+const protobufBf = protoEncode(sample);
+
 function loadProto() {
   const writer = builder.compileWriter();
   const reader = builder.compileReader();
@@ -235,10 +238,6 @@ function loadProto() {
 }
 
 async function start() {
-  const { encode: protoEncode, decode: protoDecode } = await loadProto();
-
-  const protobufBf = protoEncode(sample);
-
   {
     console.log(
       'sample json size: ',
@@ -255,11 +254,11 @@ async function start() {
       .add('protocol-less', function () {
         serialize(sample);
       })
-      .add('json', function () {
-        JSON.stringify(sample);
-      })
       .add('protocol-builder', function () {
         protoEncode(sample);
+      })
+      .add('json', function () {
+        JSON.stringify(sample);
       })
       .on('cycle', function (event) {
         console.log(String(event.target));

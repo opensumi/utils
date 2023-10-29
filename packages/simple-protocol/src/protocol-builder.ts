@@ -76,6 +76,133 @@ const assertWriteType = (
   }
 };
 
+interface IProtocolCodeFactoryOprationBase {
+  type: string;
+}
+
+interface IProtocolCodeFactoryOprationAssertType
+  extends IProtocolCodeFactoryOprationBase {
+  type: 'assertType';
+  decl: string;
+  code: string;
+  inputVarName: string;
+}
+
+interface IProtocolCodeFactoryOprationWrite
+  extends IProtocolCodeFactoryOprationBase {
+  type: 'write';
+  code: string;
+}
+
+interface IProtocolCodeFactoryOprationThrow {
+  type: 'throw';
+  message: string;
+}
+
+type TProtocolCodeFactoryOpration =
+  | IProtocolCodeFactoryOprationAssertType
+  | IProtocolCodeFactoryOprationWrite
+  | IProtocolCodeFactoryOprationThrow;
+
+class ProtocolCodeFactory {
+  opeartorVarName = 'writer';
+  inputVarName = 'data';
+  writer: BufferWriter;
+  constructor(options: ICompileWriterOptions = {}) {
+    const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
+    this.writer = new BufferWriter(buffer);
+  }
+
+  assert(decl: ProtocolDeclaration, code: string) {
+    this.addOpeartion({
+      type: 'assertType',
+      decl: JSON.stringify({ type: decl.type, name: decl.name }),
+      code,
+      inputVarName: this.inputVarName,
+    });
+  }
+
+  quickInvokeMethodWithCustomStr(method: keyof BufferWriter, str: string) {
+    this.addOpeartion({
+      type: 'write',
+      code: `${this.opeartorVarName}.${method}(${str});`,
+    });
+  }
+
+  quickInvokeMethod(method: keyof BufferWriter, prefix = '', suffix = '') {
+    this.addOpeartion({
+      type: 'write',
+      code: `${this.opeartorVarName}.${method}(${prefix}${this.inputVarName}${suffix});`,
+    });
+  }
+
+  addFactory(factory: ProtocolCodeFactory) {
+    this.opreations.push(...factory.opreations);
+  }
+
+  opreations = [] as TProtocolCodeFactoryOpration[];
+  addOpeartion(opearation: TProtocolCodeFactoryOpration) {
+    this.opreations.push(opearation);
+  }
+
+  assertWriteType(...args: Parameters<typeof assertWriteType>) {
+    return assertWriteType(...args);
+  }
+
+  args() {
+    const args = [this.inputVarName];
+    return args;
+  }
+
+  header() {
+    let code = '';
+    code += `var ${this.opeartorVarName} = this.writer;\n`;
+    code += `var assertWriteType = this.assertWriteType;\n`;
+    code += `${this.opeartorVarName}.offset = 0;\n`;
+
+    return code;
+  }
+
+  body() {
+    let code = '';
+
+    const rawOp = this.opreations;
+    for (let i = 0; i < rawOp.length; i++) {
+      const e = rawOp[i];
+      if (e.type === 'assertType') {
+        code += `assertWriteType(${e.code}, ${e.decl}, ${e.inputVarName});\n`;
+      }
+      if (e.type === 'write') {
+        code += `${e.code}\n`;
+      }
+      if (e.type === 'throw') {
+        code += `throw new Error(${e.message});\n`;
+      }
+    }
+
+    return code;
+  }
+
+  footer() {
+    let code = '\n';
+    code += `return ${this.opeartorVarName}.make();`;
+
+    return code;
+  }
+
+  create() {
+    const body = `"use strict";
+${this.header()}
+${this.body()}
+${this.footer()}
+`;
+
+    console.log(body);
+    const fn = new Function(...this.args(), body);
+    return fn;
+  }
+}
+
 export class ProtocolBuilder {
   compact: boolean;
   decl: ProtocolDeclaration;
@@ -85,119 +212,139 @@ export class ProtocolBuilder {
   }
 
   private createWriteFuncWithDeclaration(
+    codeFactory: ProtocolCodeFactory,
     decl: ProtocolDeclaration,
-  ): ProtocolWrite {
-    let fn: ProtocolWrite = noop;
+  ): void {
+    if (!decl) {
+      throw new Error('Declaration is empty');
+    }
+
     switch (decl.type) {
       case 'String':
-        fn = (writer, data: string) => {
-          assertWriteType(typeof data === 'string', decl, data);
-          writer.writeString(data);
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'string'`,
+        );
+        codeFactory.quickInvokeMethod('writeString');
         break;
       case 'Buffer':
-        fn = (writer, data: Buffer) => {
-          assertWriteType(Buffer.isBuffer(data), decl, data);
-          writer.writeBuffer(data);
-        };
+        codeFactory.assert(
+          decl,
+          `Buffer.isBuffer(${codeFactory.inputVarName})`,
+        );
+        codeFactory.quickInvokeMethod('writeBuffer');
         break;
       case 'UInt8':
-        fn = (writer, data: number) => {
-          assertWriteType(typeof data === 'number', decl, data);
-          // if data is not UInt8(0~255), Buffer write will throw
-          writer.writeUInt8(data);
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'number'`,
+        );
+        codeFactory.quickInvokeMethod('writeUInt8');
         break;
       case 'UInt16':
-        fn = (writer, data: number) => {
-          assertWriteType(typeof data === 'number', decl, data);
-          writer.writeUInt16BE(data);
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'number'`,
+        );
+        codeFactory.quickInvokeMethod('writeUInt16BE');
         break;
       case 'UInt32':
-        fn = (writer, data: number) => {
-          assertWriteType(typeof data === 'number', decl, data);
-          writer.writeUInt32BE(data);
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'number'`,
+        );
+        codeFactory.quickInvokeMethod('writeUInt32BE');
         break;
       case 'JSONObject':
-        fn = (writer, data: unknown) => {
-          assertWriteType(typeof data === 'object', decl, data);
-          const buffer = JSON.stringify(data);
-          writer.writeBuffer(Buffer.from(buffer, 'utf8'));
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'object'`,
+        );
+        codeFactory.quickInvokeMethod('writeString', 'JSON.stringify(', ')');
         break;
       case 'BigInt':
-        fn = (writer, data: bigint) => {
-          assertWriteType(typeof data === 'bigint', decl, data);
-          writer.writeBigInt(data);
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'bigint'`,
+        );
+        codeFactory.quickInvokeMethod('writeBigInt');
         break;
       case 'Array': {
-        const t = this.createWriteFuncWithDeclaration(
+        codeFactory.assert(decl, `Array.isArray(${codeFactory.inputVarName})`);
+        codeFactory.quickInvokeMethod('writeUIntVar', '', '.length');
+        codeFactory.addOpeartion({
+          type: 'write',
+          code: `for (const element of ${codeFactory.inputVarName}) {`,
+        });
+        const newCodeFactory = new ProtocolCodeFactory();
+        newCodeFactory.inputVarName = 'element';
+        this.createWriteFuncWithDeclaration(
+          newCodeFactory,
           (decl as ProtocolArrayDeclaration).element,
         );
-        fn = (writer, data: unknown[]) => {
-          assertWriteType(Array.isArray(data), decl, data);
-          writer.writeUIntVar(data.length);
-          for (const element of data) {
-            t(writer, element);
-          }
-        };
+        codeFactory.addFactory(newCodeFactory);
+        codeFactory.addOpeartion({
+          type: 'write',
+          code: `}`,
+        });
         break;
       }
       case 'Union': {
-        const functions = [] as ProtocolWrite[];
-        const elements = (decl as ProtocolUnionDeclaration).elements;
-        for (const element of elements) {
-          functions.push(this.createWriteFuncWithDeclaration(element));
-        }
-        fn = (writer, data: unknown[]) => {
-          assertWriteType(Array.isArray(data), decl, data);
+        codeFactory.assert(decl, `Array.isArray(${codeFactory.inputVarName})`);
+        codeFactory.quickInvokeMethod('writeUInt8', '', '.length');
 
-          writer.writeUInt8(data.length);
-          for (let i = 0; i < data.length; i++) {
-            const element = data[i];
-            const func = functions[i];
-            func(writer, element);
-          }
-        };
+        const elements = (decl as ProtocolUnionDeclaration).elements;
+
+        for (let i = 0; i < elements.length; i++) {
+          const element = elements[i];
+          const newCodeFactory = new ProtocolCodeFactory();
+          newCodeFactory.inputVarName = `${codeFactory.inputVarName}[${i}]`;
+          this.createWriteFuncWithDeclaration(newCodeFactory, element);
+          codeFactory.addFactory(newCodeFactory);
+        }
         break;
       }
       case 'Object': {
         const fields = (decl as ProtocolObjectDeclaration).fields;
-        const functions = {} as Record<string, ProtocolWrite>;
+        if (!fields) {
+          throw new Error('Object fields is empty');
+        }
+
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'object'`,
+        );
+
+        codeFactory.quickInvokeMethodWithCustomStr(
+          'writeUInt8',
+          `${fields.length}`,
+        );
+
         for (const field of fields) {
           const key = field.name;
-          functions[key] = this.createWriteFuncWithDeclaration(field);
+          codeFactory.quickInvokeMethodWithCustomStr('writeString', `'${key}'`);
+          const newInputVarName = `${codeFactory.inputVarName}['${key}']`;
+          const newCodeFactory = new ProtocolCodeFactory();
+          newCodeFactory.inputVarName = newInputVarName;
+          this.createWriteFuncWithDeclaration(newCodeFactory, field);
+          codeFactory.addFactory(newCodeFactory);
         }
-        fn = (writer, data: unknown) => {
-          assertWriteType(typeof data === 'object', decl, data);
-          writer.writeUInt8(Object.keys(functions).length);
-          for (const key of Object.keys(data)) {
-            const fn = functions[key];
-            const value = data[key];
-            if (!fn) {
-              throw new Error(`Unknown key ${key}`);
-            }
-            writer.writeString(key);
-            fn(writer, value);
-          }
-        };
         break;
       }
       case 'Undefined': {
-        fn = (writer, data: unknown) => {
-          assertWriteType(typeof data === 'undefined', decl, data);
-          writer.writeUInt8(0);
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'undefined'`,
+        );
+        codeFactory.quickInvokeMethodWithCustomStr('writeUInt8', '0');
         break;
       }
       case 'Boolean':
-        fn = (writer, data: unknown) => {
-          assertWriteType(typeof data === 'boolean', decl, data);
-          writer.writeUInt8(data ? 1 : 0);
-        };
+        codeFactory.assert(
+          decl,
+          `typeof ${codeFactory.inputVarName} === 'boolean'`,
+        );
+        codeFactory.quickInvokeMethod('writeUInt8', '', ' ? 1 : 0');
         break;
       default:
         throw new Error(
@@ -206,7 +353,6 @@ export class ProtocolBuilder {
           }`,
         );
     }
-    return fn;
   }
 
   private createReadFuncWithDeclaration(
@@ -327,6 +473,7 @@ export class ProtocolBuilder {
     }
     return fn;
   }
+
   compileReader() {
     const fn = this.createReadFuncWithDeclaration(this.decl);
     return (buffer: Buffer) => {
@@ -337,15 +484,8 @@ export class ProtocolBuilder {
   }
 
   compileWriter(options: ICompileWriterOptions = {}) {
-    const func = this.createWriteFuncWithDeclaration(this.decl);
-    // 1m
-    const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
-    const writer = new BufferWriter(buffer);
-
-    return (data: unknown) => {
-      writer.offset = 0;
-      func(writer, data);
-      return writer.make();
-    };
+    const codeFactory = new ProtocolCodeFactory(options);
+    this.createWriteFuncWithDeclaration(codeFactory, this.decl);
+    return codeFactory.create().bind(codeFactory);
   }
 }
