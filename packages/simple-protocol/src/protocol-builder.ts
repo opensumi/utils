@@ -21,17 +21,17 @@ export interface BaseProtocolDeclaration {
 
 export interface ProtocolArrayDeclaration extends BaseProtocolDeclaration {
   type: 'Array';
-  element: BaseProtocolDeclaration;
+  element: ProtocolDeclaration;
 }
 
 export interface ProtocolUnionDeclaration extends BaseProtocolDeclaration {
   type: 'Union';
-  elements: BaseProtocolDeclaration[];
+  elements: ProtocolDeclaration[];
 }
 
 export interface ProtocolObjectDeclaration extends BaseProtocolDeclaration {
   type: 'Object';
-  fields: BaseProtocolDeclaration[];
+  fields: ProtocolDeclaration[];
 }
 
 export type ProtocolDeclaration =
@@ -178,8 +178,19 @@ export class ProtocolBuilder {
         };
         break;
       }
+      case 'Undefined': {
+        fn = (writer, data: any) => {
+          assertWriteType(typeof data === 'undefined', decl, data);
+          writer.writeUInt8(0);
+        };
+        break;
+      }
       default:
-        throw new Error(`${decl.name}: Unknown type ${decl.type}`);
+        throw new Error(
+          `${(decl as ProtocolDeclaration).name}: Unknown type ${
+            (decl as ProtocolDeclaration).type
+          }`,
+        );
     }
     return fn;
   }
@@ -284,8 +295,15 @@ export class ProtocolBuilder {
         };
         break;
       }
+      case 'Undefined': {
+        fn = (reader) => {
+          reader.readUInt8();
+          return undefined;
+        };
+        break;
+      }
       default:
-        throw new Error(`Unknown type ${decl.type}`);
+        throw new Error(`Unknown type ${(decl as ProtocolDeclaration).type}`);
     }
     return fn;
   }
