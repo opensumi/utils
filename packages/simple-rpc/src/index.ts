@@ -117,7 +117,7 @@ export class RPCClient {
         const fn = this._functions[errorOrMethod];
         if (fn) {
           try {
-            result = fn.apply(undefined, resultOrPayload);
+            result = fn(...resultOrPayload);
           } catch (e) {
             error = e;
           }

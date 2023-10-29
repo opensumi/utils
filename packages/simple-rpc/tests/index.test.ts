@@ -41,7 +41,7 @@ describe('simple-rpc', () => {
   it('can handle error', async () => {
     const { c1, c2, dispose } = createPair();
 
-    c2.on('add', async (a: number, b: number) => {
+    c2.on('add', async () => {
       const err = new Error('error');
       err.cause = new Error('cause');
 

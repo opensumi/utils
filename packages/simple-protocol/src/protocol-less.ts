@@ -52,19 +52,21 @@ function deserializeWorker(reader: BufferReader) {
       return reader.readUInt16BE();
     case ProtocolType.UInt32:
       return reader.readUInt32BE();
-    case ProtocolType.JSONObject:
+    case ProtocolType.JSONObject: {
       const buffer = reader.readBuffer();
       const json = buffer.toString('utf8');
       return JSON.parse(json);
+    }
     case ProtocolType.BigInt:
       return reader.readBigInt();
-    case ProtocolType.Array:
+    case ProtocolType.Array: {
       const length = reader.readUIntVar();
       const data = [] as any[];
       for (let i = 0; i < length; i++) {
         data.push(deserializeWorker(reader));
       }
       return data;
+    }
     default:
       throw new Error(`Unknown type ${type}`);
   }

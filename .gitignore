@@ -11,3 +11,8 @@
 #.pnp.*
 
 node_modules
+
+packages/*/pkg
+packages/*/lib
+packages/*/esm
+packages/*/types

@@ -1,6 +1,5 @@
 import {
   decode,
-  bytesUsed as bytesUsedFunc,
   decodeBN,
   encodeIntoBufferWriter,
   encodeIntoBNBufferWriter,

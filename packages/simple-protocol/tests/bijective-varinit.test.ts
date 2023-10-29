@@ -23,19 +23,19 @@ const printBinary = (x: Uint8Array) => {
 };
 
 const checkZigZag = (n: number, expectNumber?: number) => {
-  let zz = zigzagEncode(n);
+  const zz = zigzagEncode(n);
   if (expectNumber != null) {
     expect(zz).toBe(expectNumber);
   }
   expect(zz).toBeGreaterThanOrEqual(0);
 
-  let out = zigzagDecode(zz);
+  const out = zigzagDecode(zz);
   expect(out).toBe(n);
 
-  let zzn = zigzagEncodeBN(BigInt(n));
+  const zzn = zigzagEncodeBN(BigInt(n));
   expect(zzn).toBe(BigInt(zz));
 
-  let outn = zigzagDecodeBN(zzn);
+  const outn = zigzagDecodeBN(zzn);
   expect(outn).toBe(BigInt(n));
 };
 
@@ -166,15 +166,15 @@ describe('bijective varinit', () => {
       .reverse();
 
     for (const line of tests) {
-      let spaceIdx = line.indexOf(' ');
+      const spaceIdx = line.indexOf(' ');
       expect(spaceIdx).toBeGreaterThan(0);
 
-      let num = parseInt(line.slice(0, spaceIdx));
+      const num = parseInt(line.slice(0, spaceIdx));
       if (num > Number.MAX_SAFE_INTEGER) continue;
 
       // console.log(num)
 
-      let bytes = line.slice(spaceIdx + 1);
+      const bytes = line.slice(spaceIdx + 1);
 
       const expectBytes = new Uint8Array(JSON.parse(bytes) as number[]);
       // return [parseInt(num), JSON.parse(bytes)]
