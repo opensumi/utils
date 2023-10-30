@@ -209,8 +209,15 @@ for (let i = 1; i < 19; i++) {
     (VARINT_ENC_CUTOFFS_BIGINT[i - 1] + 1n) * common_mult_n;
 }
 
+let maxSafeBigInt: bigint | undefined;
+
 /** The largest unsigned bigint we can encode (2^128 - 1) */
-export const getMaxSafeBigInt = () => 2n ** 128n - 1n;
+export const getMaxSafeBigInt = () => {
+  if (!maxSafeBigInt) {
+    maxSafeBigInt = 2n ** 128n - 1n;
+  }
+  return maxSafeBigInt;
+};
 
 /**
  * Encode the specified unsigned bigint into varint encoding, into the provided
