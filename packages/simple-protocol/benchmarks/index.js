@@ -239,10 +239,8 @@ function loadProto() {
 
 async function start() {
   {
-    console.log(
-      'sample json size: ',
-      `${(sampleJson.length / 1000).toFixed()}k`,
-    );
+    console.log('json size: ', `${(sampleJson.length / 1000).toFixed()}k`);
+    console.log('proto size: ', `${(protobufBf.length / 1000).toFixed()}k`);
     assert(JSON.stringify(protoDecode(protobufBf)) === sampleJson);
     assert.deepEqual(deserialize(furyAb), sample);
   }

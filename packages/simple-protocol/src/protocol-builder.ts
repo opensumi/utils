@@ -7,7 +7,7 @@ export const ProtocolType = {
   UInt16: 3,
   UInt32: 4,
   JSONObject: 5,
-  BigInt: 6,
+  UBigInt: 6,
   Array: 7,
   Union: 8,
   Object: 9,
@@ -185,7 +185,7 @@ class ProtocolCodeFactory {
 
   footer() {
     let code = '\n';
-    code += `return ${this.opeartorVarName}.make();`;
+    code += `return ${this.opeartorVarName}.dump();`;
 
     return code;
   }
@@ -262,12 +262,12 @@ export class ProtocolBuilder {
         );
         codeFactory.quickInvokeMethod('writeString', 'JSON.stringify(', ')');
         break;
-      case 'BigInt':
+      case 'UBigInt':
         codeFactory.assert(
           decl,
           `typeof ${codeFactory.inputVarName} === 'bigint'`,
         );
-        codeFactory.quickInvokeMethod('writeBigInt');
+        codeFactory.quickInvokeMethod('writeUBigInt');
         break;
       case 'Array': {
         codeFactory.assert(decl, `Array.isArray(${codeFactory.inputVarName})`);
@@ -397,9 +397,9 @@ export class ProtocolBuilder {
           return JSON.parse(json);
         };
         break;
-      case 'BigInt':
+      case 'UBigInt':
         fn = (reader) => {
-          return reader.readBigInt();
+          return reader.readUBigInt();
         };
         break;
       case 'Array': {

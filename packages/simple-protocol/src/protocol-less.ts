@@ -8,8 +8,8 @@ function serializeWorker(data: unknown, writer: BufferWriter) {
     writer.writeUInt8(ProtocolType.Boolean);
     writer.writeUInt8(data ? 1 : 0);
   } else if (typeof data === 'bigint') {
-    writer.writeUInt8(ProtocolType.BigInt);
-    writer.writeBigInt(data);
+    writer.writeUInt8(ProtocolType.UBigInt);
+    writer.writeUBigInt(data);
   } else if (typeof data === 'number') {
     writer.writeUInt8(ProtocolType.UInt32);
     writer.writeUInt32BE(data);
@@ -37,7 +37,7 @@ export function serialize(data: unknown) {
 
   serializeWorker(data, writer);
 
-  return writer.make();
+  return writer.dump();
 }
 
 function deserializeWorker(reader: BufferReader) {
@@ -60,8 +60,8 @@ function deserializeWorker(reader: BufferReader) {
       const json = buffer.toString('utf8');
       return JSON.parse(json);
     }
-    case ProtocolType.BigInt:
-      return reader.readBigInt();
+    case ProtocolType.UBigInt:
+      return reader.readUBigInt();
     case ProtocolType.Array: {
       const length = reader.readUIntVar();
       const data = [] as unknown[];
@@ -77,7 +77,7 @@ function deserializeWorker(reader: BufferReader) {
   }
 }
 
-export function deserialize(buffer: Buffer) {
+export function deserialize(buffer: Buffer | Uint8Array) {
   const reader = new BufferReader(buffer);
   return deserializeWorker(reader);
 }

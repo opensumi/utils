@@ -11,24 +11,25 @@ if (typeof Buffer === 'undefined') {
   );
 }
 
+export interface IBufferWriterOptions {
+  littleEndian?: boolean;
+}
+
 export class BufferWriter {
-  buffer: Buffer;
+  dataView: DataView;
+
+  littleEndian = false;
+
   constructor(
-    bufferOrUint8: Buffer | Uint8Array,
+    public buffer: Buffer | Uint8Array,
     public offset = 0,
+    options: IBufferWriterOptions = {},
   ) {
-    if (Buffer.isBuffer(bufferOrUint8)) {
-      this.buffer = bufferOrUint8;
-    } else {
-      this.buffer = Buffer.from(
-        bufferOrUint8,
-        bufferOrUint8.byteOffset,
-        bufferOrUint8.byteLength,
-      );
-    }
+    this.dataView = new DataView(this.buffer.buffer, this.buffer.byteOffset);
+    this.littleEndian = options.littleEndian;
   }
 
-  make() {
+  dump() {
     return sliceBuffer(this.buffer, 0, this.offset);
   }
 
@@ -45,23 +46,24 @@ export class BufferWriter {
     }
 
     this.buffer = sliceBuffer(this.buffer, 0, this.offset, size);
+    this.dataView = new DataView(this.buffer.buffer, this.buffer.byteOffset);
   }
 
   writeUInt8(value: number) {
     this.allocate(1);
-    this.buffer.writeUInt8(value, this.offset);
+    this.dataView.setUint8(this.offset, value);
     this.offset += 1;
   }
 
   writeUInt16BE(value: number) {
     this.allocate(2);
-    this.buffer.writeUInt16BE(value, this.offset);
+    this.dataView.setUint16(this.offset, value, this.littleEndian);
     this.offset += 2;
   }
 
   writeUInt32BE(value: number) {
     this.allocate(4);
-    this.buffer.writeUInt32BE(value, this.offset);
+    this.dataView.setUint32(this.offset, value, this.littleEndian);
     this.offset += 4;
   }
 
@@ -81,31 +83,41 @@ export class BufferWriter {
     this.writeBuffer(bytes);
   }
 
-  writeBigInt(value: bigint) {
+  writeUBigInt(value: bigint) {
     encodeIntoBNBufferWriter(value, this);
   }
 }
 
 export class BufferReader {
+  littleEndian = false;
+  dataView: DataView;
+
   constructor(
-    public buffer: Buffer,
+    public buffer: Buffer | Uint8Array,
     public offset = 0,
-  ) {}
+  ) {
+    this.dataView = new DataView(buffer.buffer, buffer.byteOffset);
+  }
+
+  reset() {
+    this.offset = 0;
+  }
 
   readUInt8() {
-    const value = this.buffer.readUInt8(this.offset);
+    // const value = this.buffer.readUInt8(this.offset);
+    const value = this.dataView.getUint8(this.offset);
     this.offset += 1;
     return value;
   }
 
   readUInt16BE() {
-    const value = this.buffer.readUInt16BE(this.offset);
+    const value = this.dataView.getUint16(this.offset, this.littleEndian);
     this.offset += 2;
     return value;
   }
 
   readUInt32BE() {
-    const value = this.buffer.readUInt32BE(this.offset);
+    const value = this.dataView.getUint32(this.offset, this.littleEndian);
     this.offset += 4;
     return value;
   }
@@ -129,23 +141,29 @@ export class BufferReader {
     return bytes.toString('utf8');
   }
 
-  readBigInt() {
+  readUBigInt() {
     const [value, bytesUsed] = decodeBN(this.buffer, this.offset);
     this.offset += bytesUsed;
     return value;
   }
 }
 
+export const isNodeEnv = typeof process === 'object';
+
 export function allocateBuffer(size: number) {
-  return Buffer.allocUnsafe(size);
+  if (isNodeEnv) {
+    return Buffer.allocUnsafe(size);
+  }
+
+  return new Uint8Array(size);
 }
 
 export function sliceBuffer(
-  buffer: Buffer,
+  buffer: Buffer | Uint8Array,
   start: number,
   end: number,
   size?: number,
-): Buffer {
+): Buffer | Uint8Array {
   size = size ?? end - start;
   const buf = allocateBuffer(size);
   for (let i = 0; i < size; i++) {
