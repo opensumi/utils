@@ -104,14 +104,11 @@ type TProtocolCodeFactoryOpration =
   | IProtocolCodeFactoryOprationWrite
   | IProtocolCodeFactoryOprationThrow;
 
+let varId = 0;
+
 class ProtocolCodeFactory {
   opeartorVarName = 'writer';
   inputVarName = 'data';
-  writer: BufferWriter;
-  constructor(options: ICompileWriterOptions = {}) {
-    const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
-    this.writer = new BufferWriter(buffer);
-  }
 
   assert(decl: ProtocolDeclaration, code: string) {
     this.addOpeartion({
@@ -120,6 +117,26 @@ class ProtocolCodeFactory {
       code,
       inputVarName: this.inputVarName,
     });
+  }
+
+  comment(comment: string) {
+    this.addOpeartion({
+      type: 'write',
+      code: `// ${comment}`,
+    });
+  }
+
+  getNextVarName() {
+    return '_x' + varId++;
+  }
+
+  varName(ref: string) {
+    const nextVarName = this.getNextVarName();
+    this.addOpeartion({
+      type: 'write',
+      code: `var ${nextVarName} = ` + ref + '\n',
+    });
+    return nextVarName;
   }
 
   quickInvokeMethodWithCustomStr(method: keyof BufferWriter, str: string) {
@@ -145,10 +162,6 @@ class ProtocolCodeFactory {
     this.opreations.push(opearation);
   }
 
-  assertWriteType(...args: Parameters<typeof assertWriteType>) {
-    return assertWriteType(...args);
-  }
-
   args() {
     const args = [this.inputVarName];
     return args;
@@ -156,9 +169,8 @@ class ProtocolCodeFactory {
 
   header() {
     let code = '';
-    code += `var ${this.opeartorVarName} = this.writer;\n`;
-    code += `var assertWriteType = this.assertWriteType;\n`;
     code += `${this.opeartorVarName}.offset = 0;\n`;
+    code += `var _x = ${this.inputVarName};\n`;
 
     return code;
   }
@@ -184,22 +196,25 @@ class ProtocolCodeFactory {
   }
 
   footer() {
-    let code = '\n';
-    code += `return ${this.opeartorVarName}.dump();`;
-
+    let code = '';
+    code += `return ${this.opeartorVarName}.dump();\n`;
     return code;
   }
 
-  create() {
-    const body = `"use strict";
-${this.header()}
-${this.body()}
-${this.footer()}
+  create(options: ICompileWriterOptions = {}) {
+    const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
+    const writer = new BufferWriter(buffer);
+    const body = `function ProtolWriter(${this.args().join(', ')}) {
+  ${this.header()}
+  ${this.body()}
+  ${this.footer()}
+}
+return ProtolWriter;
 `;
 
     console.log(body);
-    const fn = new Function(...this.args(), body);
-    return fn;
+    const fn = new Function(this.opeartorVarName, 'assertWriteType', body);
+    return fn(writer, assertWriteType);
   }
 }
 
@@ -270,6 +285,7 @@ export class ProtocolBuilder {
         codeFactory.quickInvokeMethod('writeUBigInt');
         break;
       case 'Array': {
+        codeFactory.comment(`Array ${decl.name} start`);
         codeFactory.assert(decl, `Array.isArray(${codeFactory.inputVarName})`);
         codeFactory.quickInvokeMethod('writeUIntVar', '', '.length');
         codeFactory.addOpeartion({
@@ -287,9 +303,11 @@ export class ProtocolBuilder {
           type: 'write',
           code: `}`,
         });
+        codeFactory.comment(`Array ${decl.name} end`);
         break;
       }
       case 'Union': {
+        codeFactory.comment(`Union ${decl.name} start`);
         codeFactory.assert(decl, `Array.isArray(${codeFactory.inputVarName})`);
         codeFactory.quickInvokeMethod('writeUInt8', '', '.length');
 
@@ -298,10 +316,14 @@ export class ProtocolBuilder {
         for (let i = 0; i < elements.length; i++) {
           const element = elements[i];
           const newCodeFactory = new ProtocolCodeFactory();
-          newCodeFactory.inputVarName = `${codeFactory.inputVarName}[${i}]`;
+          const varName = newCodeFactory.varName(
+            `${codeFactory.inputVarName}[${i}]`,
+          );
+          newCodeFactory.inputVarName = varName;
           this.createWriteFuncWithDeclaration(newCodeFactory, element);
           codeFactory.addFactory(newCodeFactory);
         }
+        codeFactory.comment(`Union ${decl.name} end`);
         break;
       }
       case 'Object': {
@@ -309,7 +331,7 @@ export class ProtocolBuilder {
         if (!fields) {
           throw new Error('Object fields is empty');
         }
-
+        codeFactory.comment(`Object ${decl.name} start`);
         codeFactory.assert(
           decl,
           `typeof ${codeFactory.inputVarName} === 'object'`,
@@ -323,12 +345,14 @@ export class ProtocolBuilder {
         for (const field of fields) {
           const key = field.name;
           codeFactory.quickInvokeMethodWithCustomStr('writeString', `'${key}'`);
-          const newInputVarName = `${codeFactory.inputVarName}['${key}']`;
           const newCodeFactory = new ProtocolCodeFactory();
-          newCodeFactory.inputVarName = newInputVarName;
+          const newInputVarName = `${codeFactory.inputVarName}['${key}']`;
+          const varName = newCodeFactory.varName(newInputVarName);
+          newCodeFactory.inputVarName = varName;
           this.createWriteFuncWithDeclaration(newCodeFactory, field);
           codeFactory.addFactory(newCodeFactory);
         }
+        codeFactory.comment(`Object ${decl.name} end`);
         break;
       }
       case 'Undefined': {
@@ -484,8 +508,8 @@ export class ProtocolBuilder {
   }
 
   compileWriter(options: ICompileWriterOptions = {}) {
-    const codeFactory = new ProtocolCodeFactory(options);
+    const codeFactory = new ProtocolCodeFactory();
     this.createWriteFuncWithDeclaration(codeFactory, this.decl);
-    return codeFactory.create().bind(codeFactory);
+    return codeFactory.create(options);
   }
 }

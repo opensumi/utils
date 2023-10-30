@@ -1,7 +1,7 @@
 import { ProtocolBuilder } from '../src/protocol-builder';
 
 describe('protocol builder', () => {
-  it('Object should work', async () => {
+  it.only('Object should work', async () => {
     const protocol = new ProtocolBuilder({
       type: 'Object',
       name: 'test',

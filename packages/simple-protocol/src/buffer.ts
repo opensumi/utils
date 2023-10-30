@@ -142,8 +142,10 @@ export class BufferReader {
   }
 
   readString() {
-    const bytes = this.readBuffer();
-    return bytes.toString('utf8');
+    const length = this.readUIntVar();
+    const value = utf8Slice(this.buffer, this.offset, this.offset + length);
+    this.offset += length;
+    return value;
   }
 
   readUBigInt() {
@@ -163,6 +165,8 @@ export function allocateBuffer(size: number) {
   return new Uint8Array(size);
 }
 
+export const sharedBuffer = allocateBuffer(1024);
+
 export function sliceBuffer(
   buffer: Buffer | Uint8Array,
   start: number,
@@ -171,8 +175,26 @@ export function sliceBuffer(
 ): Buffer | Uint8Array {
   size = size ?? end - start;
   const buf = allocateBuffer(size);
-  for (let i = 0; i < size; i++) {
-    buf[i] = buffer[start + i];
-  }
+  sliceBufferTo(buffer, buf, start, end);
   return buf;
+}
+
+export function sliceBufferTo(
+  buffer: Buffer | Uint8Array,
+  to: Buffer | Uint8Array,
+  start: number,
+  end: number,
+) {
+  for (let i = 0; i < end; i++) {
+    to[i] = buffer[start + i];
+  }
+  return to;
+}
+
+export function utf8Slice(
+  buffer: Buffer | Uint8Array,
+  start: number,
+  end: number,
+) {
+  return buffer.toString('utf8', start, end);
 }
