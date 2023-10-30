@@ -49,6 +49,11 @@ export class BufferWriter {
     this.dataView = new DataView(this.buffer.buffer, this.buffer.byteOffset);
   }
 
+  writeUInt8Unsafe(value: number) {
+    this.dataView.setUint8(this.offset, value);
+    this.offset += 1;
+  }
+
   writeUInt8(value: number) {
     this.allocate(1);
     this.dataView.setUint8(this.offset, value);

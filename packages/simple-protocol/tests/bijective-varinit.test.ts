@@ -72,7 +72,7 @@ export function encode(num: number): Uint8Array {
   bufferWriter.offset = 0;
   const bytesUsed = encodeIntoBufferWriter(num, bufferWriter);
   const out = new Uint8Array(bytesUsed);
-  out.set(bufferWriter.make());
+  out.set(bufferWriter.dump());
   return out;
 }
 
@@ -91,7 +91,7 @@ export function encodeBN(num: bigint): Uint8Array {
   bnBufferWriter.offset = 0;
   const bytesUsed = encodeIntoBNBufferWriter(num, bnBufferWriter);
   const out = new Uint8Array(bytesUsed);
-  out.set(bnBufferWriter.make());
+  out.set(bnBufferWriter.dump());
   return out;
 }
 

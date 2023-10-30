@@ -27,9 +27,9 @@
 
 import type { BufferWriter } from './buffer';
 
-const assert = (a: boolean, msg?: string) => {
-  if (!a) throw Error(msg ?? 'Assertion failed');
-};
+// const assert = (a: boolean, msg?: string) => {
+//   if (!a) throw Error(msg ?? 'Assertion failed');
+// };
 
 /**
  * Maximum number of bytes needed to store a javascript `number` up to 64 bits.
@@ -140,6 +140,7 @@ export function encodeIntoBufferWriter(
   if (num < 0) throw Error('Varint encoding: Number must be non-negative');
 
   let prefix = 0;
+  bufferWriter.allocate(VARINT_ENC_CUTOFFS.length);
   for (let i = 0; i < VARINT_ENC_CUTOFFS.length; i++) {
     if (num < VARINT_ENC_CUTOFFS[i]) {
       if (i > 0) num -= VARINT_ENC_CUTOFFS[i - 1];
@@ -147,16 +148,16 @@ export function encodeIntoBufferWriter(
       const offset = bufferWriter.offset;
       for (let j = i; j > 0; j--) {
         bufferWriter.offset = offset + j;
-        bufferWriter.writeUInt8(num & 0xff);
+        bufferWriter.writeUInt8Unsafe(num & 0xff);
         // I'd rather bitshift, but that coerces to a u32.
         // num >>= 8
         num = Math.floor(num / 256);
       }
-      assert((prefix & num) === 0); // Must never have overlapping bits.
-      assert(num >= 0);
+      // assert((prefix & num) === 0); // Must never have overlapping bits.
+      // assert(num >= 0);
 
       bufferWriter.offset = offset;
-      bufferWriter.writeUInt8(prefix | num);
+      bufferWriter.writeUInt8Unsafe(prefix | num);
       bufferWriter.offset = offset + i + 1;
       return i + 1;
     }
@@ -234,6 +235,8 @@ export function encodeIntoBNBufferWriter(
     return encodeIntoBufferWriter(Number(num), bufferWriter);
   if (num > getMaxSafeBigInt())
     throw Error('Cannot encode unsigned integers above 2^128'); // Could support them pretty easily tho.
+  // allocate the max number of bytes we could possibly need.
+  bufferWriter.allocate(VARINT_ENC_CUTOFFS_BIGINT.length);
 
   for (let i = 0; i < VARINT_ENC_CUTOFFS_BIGINT.length; i++) {
     if (num < VARINT_ENC_CUTOFFS_BIGINT[i]) {
@@ -245,7 +248,7 @@ export function encodeIntoBNBufferWriter(
       // Prefix always fits in a normal int.
       let leadingOnes = i;
       for (; leadingOnes >= 8; leadingOnes -= 8) {
-        bufferWriter.writeUInt8(0xff);
+        bufferWriter.writeUInt8Unsafe(0xff);
       }
 
       // & 0xff is only here to make the number positive, but its not necessary.
@@ -254,12 +257,16 @@ export function encodeIntoBNBufferWriter(
 
       // I'm filling the buffer left to right here,
       // but it might be faster / better to fill it right to left?
-      bufferWriter.writeUInt8(prefix | Number(num >> BigInt(trailingBits)));
-      assert(trailingBits % 8 === 0);
+      bufferWriter.writeUInt8Unsafe(
+        prefix | Number(num >> BigInt(trailingBits)),
+      );
+      // assert(trailingBits % 8 === 0);
 
       for (let j = trailingBits - 8; j >= 0; j -= 8) {
         // Using BigInt.asUintN here to truncate so we don't overflow the Number. Could equally (x & 0xffn).
-        bufferWriter.writeUInt8(Number(BigInt.asUintN(8, num >> BigInt(j))));
+        bufferWriter.writeUInt8Unsafe(
+          Number(BigInt.asUintN(8, num >> BigInt(j))),
+        );
       }
       return i + 1; // i+1 === change in offset.
     }
@@ -283,7 +290,7 @@ export function decodeBN(bytes: Uint8Array, baseOffset = 0): [bigint, number] {
   const b0 = bytes[baseOffset];
   if ((b0 & 0b1000_0000) === 0) return [BigInt(b0), 1];
   const numBytes = bytesUsed(bytes, baseOffset);
-  assert(numBytes >= 2);
+  // assert(numBytes >= 2);
 
   if (bytes.length < numBytes) throw Error('Unexpected end of input');
 
