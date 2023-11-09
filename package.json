@@ -3,6 +3,7 @@
   "packageManager": "yarn@3.6.3",
   "private": true,
   "scripts": {
+    "init": "yarn build",
     "build": "lerna run build",
     "test": "jest"
   },

@@ -14,7 +14,8 @@
   "source": "src/index.ts",
   "scripts": {
     "prepublishOnly": "yarn build",
-    "build": "node ../../scripts/build.mjs && tsc -p tsconfig.json"
+    "build": "node ../../scripts/build.mjs && tsc -p tsconfig.json",
+    "benchmark": "node ./benchmarks/index.js"
   },
   "publishConfig": {
     "access": "public"
