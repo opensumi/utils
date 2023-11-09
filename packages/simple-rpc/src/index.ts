@@ -13,11 +13,10 @@ export type IOptions = {
   logger?: ILogger;
 };
 
-type TOnMessageCbParams = [
-  /*msgId*/ string,
-  /*method*/ string,
-  /*payload*/ any,
-];
+export type IFunction = (...args: any[]) => any;
+export type IFunctionsCollection = Record<string, IFunction>;
+
+type TFunctionInvokeArgs = [/*msgId*/ string, /*method*/ string, /*args*/ any];
 
 export interface ErrorLike {
   message: string;
@@ -91,7 +90,7 @@ export class RPCClient {
     this.postMessage = options.postMessage;
     this.onMessage = options.onMessage;
 
-    this.onMessage((msg: TOnMessageCbParams) => {
+    this.onMessage((msg: TFunctionInvokeArgs) => {
       if (!Array.isArray(msg) || msg.length < 2) {
         return;
       }
@@ -144,9 +143,9 @@ export class RPCClient {
     this.logger = options.logger || console;
   }
 
-  invoke(method: string, ...payload: any[]) {
+  invoke(method: string, ...args: any[]) {
     const messageId = getUniqueId(this.nextMsgId++);
-    const data = [messageId, method, payload];
+    const data = [messageId, method, args] as TFunctionInvokeArgs;
 
     return new Promise((resolve, reject) => {
       this.#callbacks[messageId] = function (error, result) {
@@ -174,11 +173,13 @@ export class RPCClient {
     }
   }
 
-  private _functions: Record<string, any> = {};
+  private _functions: IFunctionsCollection = {};
 
-  on(_method: string, cb: (...args: any[]) => any): IDisposable {
+  on(_method: string, cb: IFunction): IDisposable {
     if (typeof cb === 'function') {
       this._functions[_method] = cb;
+    } else {
+      throw new Error('cb must be a function');
     }
 
     return {
@@ -188,13 +189,15 @@ export class RPCClient {
     };
   }
 
-  private saveFunctionsForProxy(fns: Record<string, any>) {
+  private saveFunctionsForProxy(fns: IFunctionsCollection) {
     Object.entries(fns).forEach(([key, cb]) => {
       this.on(key, cb);
     });
   }
 
-  createProxy<RemoteFunctions, LocalFunctions>(functions: LocalFunctions) {
+  createProxy<RemoteFunctions, LocalFunctions extends IFunctionsCollection>(
+    functions: LocalFunctions,
+  ) {
     this.saveFunctionsForProxy(functions);
     return new Proxy(
       {},
