@@ -1,6 +1,6 @@
-export interface IDisposable {
-  dispose(): void;
-}
+import { IDisposable, Disposable } from './disposable';
+
+type MaybePromise<T> = T | Promise<T> | PromiseLike<T>;
 
 export interface ILogger {
   log(...args: any[]): void;
@@ -8,8 +8,8 @@ export interface ILogger {
 }
 
 export type IOptions = {
-  onMessage: (cb: (data: any) => void) => void;
-  postMessage: (data: any) => void;
+  onMessage: (cb: (data: any) => void) => IDisposable | void;
+  postMessage: (data: any) => MaybePromise<void>;
   logger?: ILogger;
 };
 
@@ -76,7 +76,7 @@ class RPCError extends Error {
  * when client invoke a method, it will send a message to host, and wait for the host to return the result.
  * the send format is: [messageId, method, payload], and client will waiting for a response message: ['->'+messageId, error, result].
  */
-export class RPCClient {
+export class RPCClient extends Disposable {
   nextMsgId = 0;
 
   postMessage: IOptions['postMessage'];
@@ -87,10 +87,11 @@ export class RPCClient {
   logger: ILogger;
 
   constructor(options: IOptions) {
+    super();
     this.postMessage = options.postMessage;
     this.onMessage = options.onMessage;
 
-    this.onMessage((msg: TFunctionInvokeArgs) => {
+    const dispose = this.onMessage((msg: TFunctionInvokeArgs) => {
       if (!Array.isArray(msg) || msg.length < 2) {
         return;
       }
@@ -139,7 +140,9 @@ export class RPCClient {
         }
       }
     });
-
+    if (dispose) {
+      this.addDispose(dispose);
+    }
     this.logger = options.logger || console;
   }
 
