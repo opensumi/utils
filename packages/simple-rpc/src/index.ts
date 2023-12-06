@@ -13,10 +13,22 @@ export type IOptions = {
   logger?: ILogger;
 };
 
+export type IRPCType = /** request */ 0 | /** response */ 1;
+
+const RPC_TYPE = {
+  REQUEST: 0,
+  RESPONSE: 1,
+} as const;
+
 export type IFunction = (...args: any[]) => any;
 export type IFunctionsCollection = Record<string, IFunction>;
 
-type TFunctionInvokeArgs = [/*msgId*/ string, /*method*/ string, /*args*/ any];
+export type TFunctionInvokeArgs = [
+  IRPCType,
+  /*msgId*/ string,
+  /*method*/ string,
+  /*args*/ any,
+];
 
 export interface ErrorLike {
   message: string;
@@ -25,11 +37,12 @@ export interface ErrorLike {
   cause?: ErrorLike;
 }
 
-type TResponseMessage = [/*msgId*/ string, /*error*/ ErrorLike, /*result*/ any];
-
-const kResponsePrefix = '->';
-
-const getUniqueId = (id: string | number) => `${id}`;
+export type TResponseMessage = [
+  /** response */ 1,
+  /*msgId*/ string,
+  /*error*/ ErrorLike,
+  /*result*/ any,
+];
 
 function serializeErrorReplacer(key: string, value: any) {
   if (value instanceof Error) {
@@ -96,19 +109,18 @@ export class RPCClient extends Disposable {
         return;
       }
 
-      const [messageId, errorOrMethod, resultOrPayload] = msg;
-      if (!messageId) {
+      const [type, messageId, errorOrMethod, resultOrPayload] = msg;
+      if (typeof type === 'undefined') {
         return;
       }
 
-      if (messageId.startsWith(kResponsePrefix)) {
-        const callbackId = messageId.slice(kResponsePrefix.length);
-        const callback = this.#callbacks[callbackId];
+      if (type === RPC_TYPE.RESPONSE) {
+        const callback = this.#callbacks[messageId];
         if (!callback) {
           return;
         }
 
-        delete this.#callbacks[callbackId];
+        delete this.#callbacks[messageId];
         callback(errorOrMethod, resultOrPayload);
       } else {
         let result = undefined;
@@ -147,8 +159,13 @@ export class RPCClient extends Disposable {
   }
 
   invoke(method: string, ...args: any[]) {
-    const messageId = getUniqueId(this.nextMsgId++);
-    const data = [messageId, method, args] as TFunctionInvokeArgs;
+    const messageId = this.nextMsgId++ + '';
+    const data = [
+      RPC_TYPE.REQUEST,
+      messageId,
+      method,
+      args,
+    ] as TFunctionInvokeArgs;
 
     return new Promise((resolve, reject) => {
       this.#callbacks[messageId] = function (error, result) {
@@ -162,17 +179,16 @@ export class RPCClient extends Disposable {
   }
 
   private _constructAnswer(
-    messageId: string,
+    answerId: string,
     error: Error,
     result?: any,
   ): TResponseMessage {
-    const answerId = kResponsePrefix + messageId;
     if (error) {
       this.logger.error('RPCClient caught an error:', error);
 
-      return [answerId, serializeError(error), null];
+      return [RPC_TYPE.RESPONSE, answerId, serializeError(error), null];
     } else {
-      return [answerId, null, result];
+      return [RPC_TYPE.RESPONSE, answerId, null, result];
     }
   }
 
