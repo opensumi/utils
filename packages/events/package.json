@@ -1,0 +1,22 @@
+{
+  "name": "@opensumi/events",
+  "version": "0.0.5",
+  "files": [
+    "lib/**/*.js",
+    "esm/**/*.js",
+    "types/**",
+    "bin/**",
+    "src/**"
+  ],
+  "main": "lib/index.js",
+  "module": "esm/index.js",
+  "types": "types/index.d.ts",
+  "source": "src/index.ts",
+  "scripts": {
+    "prepublishOnly": "yarn build",
+    "build": "node ../../scripts/build.mjs && tsc -p tsconfig.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
