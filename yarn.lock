@@ -1393,6 +1393,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@opensumi/events@workspace:packages/events":
+  version: 0.0.0-use.local
+  resolution: "@opensumi/events@workspace:packages/events"
+  languageName: unknown
+  linkType: soft
+
 "@opensumi/message-queue@workspace:packages/message-queue":
   version: 0.0.0-use.local
   resolution: "@opensumi/message-queue@workspace:packages/message-queue"
