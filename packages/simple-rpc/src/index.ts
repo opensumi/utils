@@ -87,7 +87,6 @@ class RPCError extends Error {
  * it use a duplex communication channel to send message and receive message(generalized as `postMessage` and `onMessage`).
  *
  * when client invoke a method, it will send a message to host, and wait for the host to return the result.
- * the send format is: [messageId, method, payload], and client will waiting for a response message: ['->'+messageId, error, result].
  */
 export class RPCClient extends Disposable {
   nextMsgId = 0;
@@ -208,16 +207,13 @@ export class RPCClient extends Disposable {
     };
   }
 
-  private saveFunctionsForProxy(fns: IFunctionsCollection) {
+  listenService(fns: IFunctionsCollection) {
     Object.entries(fns).forEach(([key, cb]) => {
       this.on(key, cb);
     });
   }
 
-  createProxy<RemoteFunctions, LocalFunctions extends IFunctionsCollection>(
-    functions: LocalFunctions,
-  ) {
-    this.saveFunctionsForProxy(functions);
+  createProxy<RemoteFunctions>() {
     return new Proxy(
       {},
       {

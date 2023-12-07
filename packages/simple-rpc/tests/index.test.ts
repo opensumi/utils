@@ -43,12 +43,16 @@ describe('simple-rpc', () => {
 
     c2.on('add', async () => {
       const err = new Error('error');
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       err.cause = new Error('cause');
 
       throw err;
     });
 
     expect(c1.invoke('add', 1, 2)).rejects.toThrow(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       new Error('error', {
         cause: new Error('cause'),
       }),
@@ -72,17 +76,21 @@ describe('simple-rpc', () => {
       add(a: number, b: number): Promise<number>;
     }
 
-    const client2 = c2.createProxy<C1, C2>({
+    c2.listenService({
       add: async (a: number, b: number) => {
         return a + b;
       },
     });
 
-    const client1 = c1.createProxy<C2, C1>({
+    const client2 = c2.createProxy<C1>();
+
+    c1.listenService({
       short: async (url: string) => {
         return url;
       },
     });
+
+    const client1 = c1.createProxy<C2>();
 
     const result = await client1.add(1, 2);
     expect(result).toBe(3);
