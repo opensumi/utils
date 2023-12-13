@@ -1,41 +1,42 @@
 import { EventEmitter } from '../src/index';
 
-describe('event emitter', () => {
+describe('event emitter types', () => {
   it('basic usage', () => {
     const emitter = new EventEmitter<{
-      [key: string]: [string];
+      test: [string, string];
+      foo: [string];
     }>();
 
     const spy = jest.fn();
     const spy2 = jest.fn();
-    emitter.on('test', spy);
+
     emitter.on('foo', spy2);
 
     expect(emitter.hasListener('test')).toBe(true);
     const listeners = emitter.getListeners('test');
     expect(listeners.length).toBe(1);
 
-    emitter.emit('test', 'hello');
+    emitter.emit('test', 'hello', 'world');
     expect(spy).toBeCalledWith('hello');
     emitter.off('test', spy);
 
     const listeners2 = emitter.getListeners('test');
     expect(listeners2.length).toBe(0);
 
-    emitter.emit('test', 'hello');
+    emitter.emit('test', 'hello', 'world');
     expect(spy).toBeCalledTimes(1);
 
     emitter.once('test', spy);
-    emitter.emit('test', 'hello');
+    emitter.emit('test', 'hello', 'world');
     expect(spy).toBeCalledTimes(2);
-    emitter.emit('test', 'hello');
+    emitter.emit('test', 'hello', 'world');
     expect(spy).toBeCalledTimes(2);
 
-    emitter.off('bar', spy);
+    emitter.off('bar' as any, spy);
 
     emitter.dispose();
 
-    emitter.emit('test', 'hello');
+    emitter.emit('test' as any, 'hello');
     expect(spy).toBeCalledTimes(2);
   });
 

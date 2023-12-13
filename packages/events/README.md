@@ -15,7 +15,9 @@ yarn add @opensumi/events
 ```ts
 import { EventEmitter } from '@opensumi/events';
 
-const emitter = new EventEmitter<string>();
+const emitter = new EventEmitter<{
+  foo: [string, string];
+}>();
 
 emitter.on('foo', (arg1, arg2) => {
   console.log(arg1, arg2);
