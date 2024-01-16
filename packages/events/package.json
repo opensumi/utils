@@ -15,7 +15,8 @@
   "scripts": {
     "prepublishOnly": "yarn build",
     "build": "node ../../scripts/build.mjs && tsc -p tsconfig.json",
-    "run:example": "tsx ./example/index.ts"
+    "run:example": "tsx ./example/index.ts",
+    "test": "jest"
   },
   "publishConfig": {
     "access": "public"

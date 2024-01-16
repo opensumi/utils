@@ -33,10 +33,13 @@ export class EventEmitter<Events extends Record<any, any[]>> {
     event: Event,
     listener: Handler<Events[Event]>,
   ) {
-    const remove: () => void = this.on(event, (...args: any[]) => {
-      remove();
-      listener.apply(this, args);
-    });
+    const remove: () => void = this.on(
+      event,
+      (...args: Parameters<Handler<Events[Event]>>) => {
+        remove();
+        listener.apply(this, args);
+      },
+    );
 
     return remove;
   }
