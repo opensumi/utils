@@ -1,3 +1,7 @@
+export interface IDisposable {
+  dispose(): void;
+}
+
 export type Handler<T extends any[]> = (...args: T) => void;
 
 export class EventEmitter<Events extends Record<any, any[]>> {
@@ -6,13 +10,15 @@ export class EventEmitter<Events extends Record<any, any[]>> {
   on<Event extends keyof Events>(
     event: Event,
     listener: Handler<Events[Event]>,
-  ) {
+  ): IDisposable {
     if (!this._listeners.has(event)) {
       this._listeners.set(event, []);
     }
     this._listeners.get(event)!.push(listener);
 
-    return () => this.off(event, listener);
+    return {
+      dispose: () => this.off(event, listener),
+    };
   }
 
   off<Event extends keyof Events>(
@@ -33,15 +39,15 @@ export class EventEmitter<Events extends Record<any, any[]>> {
     event: Event,
     listener: Handler<Events[Event]>,
   ) {
-    const remove: () => void = this.on(
+    const toDispose = this.on(
       event,
       (...args: Parameters<Handler<Events[Event]>>) => {
-        remove();
+        toDispose.dispose();
         listener.apply(this, args);
       },
     );
 
-    return remove;
+    return toDispose;
   }
 
   emit<Event extends keyof Events>(

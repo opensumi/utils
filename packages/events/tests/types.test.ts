@@ -72,13 +72,13 @@ describe('event emitter types', () => {
     emitter.on('test', spy2);
 
     const disposeSpy3 = emitter.once('test', spy3);
-    disposeSpy3();
+    disposeSpy3.dispose();
 
     emitter.emit('test', 'hello');
     expect(spy).toBeCalledWith('hello');
     expect(spy2).toBeCalledWith('hello');
 
-    disposeSpy();
+    disposeSpy.dispose();
     emitter.emit('test', 'hello');
     expect(spy).toBeCalledTimes(1);
     expect(spy2).toBeCalledTimes(2);
