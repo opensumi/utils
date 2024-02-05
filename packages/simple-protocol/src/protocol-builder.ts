@@ -1,4 +1,4 @@
-import { BufferWriter, allocateBuffer, BufferReader } from './buffer';
+import { BufferWriter, BufferReader } from './buffer';
 
 export const ProtocolType = {
   String: 0,
@@ -201,9 +201,12 @@ class ProtocolCodeFactory {
     return code;
   }
 
-  create(options: ICompileWriterOptions = {}) {
-    const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
-    const writer = new BufferWriter(buffer);
+  writer: BufferWriter;
+  constructor(options: ICompileWriterOptions = {}) {
+    this.writer = new BufferWriter(options);
+  }
+
+  create() {
     const body = `function ProtoWriter(${this.args().join(', ')}) {
   ${this.header()}
   ${this.body()}
@@ -211,19 +214,23 @@ class ProtocolCodeFactory {
 }
 return ProtoWriter;
 `;
+    this.writer.reset();
 
     console.log(body);
     const fn = new Function(this.operatorVarName, 'assertWriteType', body);
-    return fn(writer, assertWriteType);
+    return fn(this.writer, assertWriteType);
   }
 }
 
 export class ProtocolBuilder {
   compact: boolean;
   decl: ProtocolDeclaration;
+  reader: BufferReader;
+
   constructor(decls: ProtocolDeclaration, options?: IProtocolBuilderOptions) {
     this.decl = decls;
     this.compact = !!options?.compact;
+    this.reader = new BufferReader();
   }
 
   private createWriteFuncWithDeclaration(
@@ -501,15 +508,15 @@ export class ProtocolBuilder {
   compileReader() {
     const fn = this.createReadFuncWithDeclaration(this.decl);
     return (buffer: Buffer) => {
-      const reader = new BufferReader(buffer);
-      const data = fn(reader);
+      this.reader.reset(buffer);
+      const data = fn(this.reader);
       return data;
     };
   }
 
   compileWriter(options: ICompileWriterOptions = {}) {
-    const codeFactory = new ProtocolCodeFactory();
+    const codeFactory = new ProtocolCodeFactory(options);
     this.createWriteFuncWithDeclaration(codeFactory, this.decl);
-    return codeFactory.create(options);
+    return codeFactory.create();
   }
 }

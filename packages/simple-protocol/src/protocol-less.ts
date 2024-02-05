@@ -1,4 +1,4 @@
-import { BufferWriter, allocateBuffer, BufferReader } from './buffer';
+import { BufferWriter, BufferReader } from './buffer';
 import { ProtocolType } from './protocol-builder';
 
 function serializeWorker(data: unknown, writer: BufferWriter) {
@@ -30,11 +30,10 @@ function serializeWorker(data: unknown, writer: BufferWriter) {
     writer.writeString(JSON.stringify(data));
   }
 }
+const writer = new BufferWriter();
 
 export function serialize(data: unknown) {
-  const buffer = allocateBuffer(1024 * 1024);
-  const writer = new BufferWriter(buffer);
-
+  writer.reset();
   serializeWorker(data, writer);
 
   return writer.dump();
@@ -76,8 +75,9 @@ function deserializeWorker(reader: BufferReader) {
       throw new Error(`Unknown type ${type}`);
   }
 }
+const reader = new BufferReader();
 
 export function deserialize(buffer: Buffer | Uint8Array) {
-  const reader = new BufferReader(buffer);
+  reader.reset(buffer);
   return deserializeWorker(reader);
 }

@@ -8,9 +8,7 @@ import {
   zigzagDecodeBN,
   zigzagEncodeBN,
   bufContainsVarint,
-  MAX_BIGINT_LEN,
   encodeIntoBNBufferWriter,
-  MAX_INT_LEN,
   encodeIntoBufferWriter,
 } from '../src/bijective-varint';
 import { randomBytes } from 'node:crypto';
@@ -54,8 +52,8 @@ const roundtripUint = (n: number) => {
   roundtripBN(BigInt(n));
 };
 
-const bufferWriter = new BufferWriter(new Uint8Array(MAX_INT_LEN));
-const bnBufferWriter = new BufferWriter(new Uint8Array(MAX_BIGINT_LEN));
+const bufferWriter = new BufferWriter();
+const bnBufferWriter = new BufferWriter();
 
 /**
  * Encode the given unsigned number as a varint. Returns the varint in a Uint8Array.

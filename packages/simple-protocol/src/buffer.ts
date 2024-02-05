@@ -13,20 +13,25 @@ if (typeof Buffer === 'undefined') {
 
 export interface IBufferWriterOptions {
   littleEndian?: boolean;
+  initialAllocSize?: number;
 }
 
 export class BufferWriter {
   dataView: DataView;
+  buffer: Uint8Array;
 
+  public offset = 0;
   littleEndian = false;
 
-  constructor(
-    public buffer: Buffer | Uint8Array,
-    public offset = 0,
-    options: IBufferWriterOptions = {},
-  ) {
-    this.dataView = new DataView(this.buffer.buffer, this.buffer.byteOffset);
+  constructor(options: IBufferWriterOptions = {}) {
     this.littleEndian = options.littleEndian;
+    this.buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
+    this.dataView = new DataView(this.buffer.buffer, this.buffer.byteOffset);
+  }
+
+  reset() {
+    this.offset = 0;
+    this.dataView = new DataView(this.buffer.buffer, this.buffer.byteOffset);
   }
 
   dump() {
@@ -90,7 +95,7 @@ export class BufferWriter {
   }
 
   writeString(value: string) {
-    const bytes = Buffer.from(value, 'utf8');
+    const bytes = fromString(value, 'utf8');
     this.writeBuffer(bytes);
   }
 
@@ -101,16 +106,14 @@ export class BufferWriter {
 
 export class BufferReader {
   littleEndian = false;
+  offset = 0;
+
   dataView: DataView;
+  buffer: Uint8Array;
 
-  constructor(
-    public buffer: Buffer | Uint8Array,
-    public offset = 0,
-  ) {
+  reset(buffer: Uint8Array) {
     this.dataView = new DataView(buffer.buffer, buffer.byteOffset);
-  }
-
-  reset() {
+    this.buffer = buffer;
     this.offset = 0;
   }
 
@@ -208,4 +211,9 @@ export function utf8Slice(
   end: number,
 ) {
   return buffer.toString('utf8', start, end);
+}
+
+// TODO: determine whether the current is Node.js
+export function fromString(value: string, encoding: BufferEncoding = 'utf8') {
+  return Buffer.from(value, encoding);
 }
