@@ -31,7 +31,7 @@ describe('protocol builder', () => {
           name: 'json',
         },
         {
-          type: 'UBigInt',
+          type: 'BigInt',
           name: 'bigint',
         },
         {
@@ -67,7 +67,7 @@ describe('protocol builder', () => {
               name: 'json',
             },
             {
-              type: 'UBigInt',
+              type: 'BigInt',
               name: 'bigint',
             },
           ],
@@ -191,7 +191,7 @@ describe('protocol builder', () => {
           name: 'json',
         },
         {
-          type: 'UBigInt',
+          type: 'BigInt',
           name: 'bigint',
         },
       ],

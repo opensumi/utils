@@ -7,7 +7,7 @@ export const ProtocolType = {
   UInt16: 3,
   Int32: 4,
   JSONObject: 5,
-  UBigInt: 6,
+  BigInt: 6,
   Array: 7,
   Union: 8,
   Object: 9,
@@ -76,33 +76,33 @@ const assertWriteType = (
   }
 };
 
-interface IProtocolCodeFactoryOprationBase {
+interface IProtocolCodeFactoryOperationBase {
   type: string;
 }
 
-interface IProtocolCodeFactoryOprationAssertType
-  extends IProtocolCodeFactoryOprationBase {
+interface IProtocolCodeFactoryOperationAssertType
+  extends IProtocolCodeFactoryOperationBase {
   type: 'assertType';
   decl: string;
   code: string;
   inputVarName: string;
 }
 
-interface IProtocolCodeFactoryOprationWrite
-  extends IProtocolCodeFactoryOprationBase {
+interface IProtocolCodeFactoryOperationWrite
+  extends IProtocolCodeFactoryOperationBase {
   type: 'write';
   code: string;
 }
 
-interface IProtocolCodeFactoryOprationThrow {
+interface IProtocolCodeFactoryOperationThrow {
   type: 'throw';
   message: string;
 }
 
-type TProtocolCodeFactoryOpration =
-  | IProtocolCodeFactoryOprationAssertType
-  | IProtocolCodeFactoryOprationWrite
-  | IProtocolCodeFactoryOprationThrow;
+type TProtocolCodeFactoryOperation =
+  | IProtocolCodeFactoryOperationAssertType
+  | IProtocolCodeFactoryOperationWrite
+  | IProtocolCodeFactoryOperationThrow;
 
 let varId = 0;
 
@@ -157,9 +157,9 @@ class ProtocolCodeFactory {
     this.operations.push(...factory.operations);
   }
 
-  operations = [] as TProtocolCodeFactoryOpration[];
-  addOperation(opearation: TProtocolCodeFactoryOpration) {
-    this.operations.push(opearation);
+  operations = [] as TProtocolCodeFactoryOperation[];
+  addOperation(operation: TProtocolCodeFactoryOperation) {
+    this.operations.push(operation);
   }
 
   args() {
@@ -277,12 +277,12 @@ export class ProtocolBuilder {
         );
         codeFactory.quickInvokeMethod('writeString', 'JSON.stringify(', ')');
         break;
-      case 'UBigInt':
+      case 'BigInt':
         codeFactory.assert(
           decl,
           `typeof ${codeFactory.inputVarName} === 'bigint'`,
         );
-        codeFactory.quickInvokeMethod('writeUBigInt');
+        codeFactory.quickInvokeMethod('writeBigInt');
         break;
       case 'Array': {
         codeFactory.comment(`Array ${decl.name} start`);
@@ -421,9 +421,9 @@ export class ProtocolBuilder {
           return JSON.parse(json);
         };
         break;
-      case 'UBigInt':
+      case 'BigInt':
         fn = (reader) => {
-          return reader.readUBigInt();
+          return reader.readBigInt();
         };
         break;
       case 'Array': {

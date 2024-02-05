@@ -94,7 +94,7 @@ export class BufferWriter {
     this.writeBuffer(bytes);
   }
 
-  writeUBigInt(value: bigint) {
+  writeBigInt(value: bigint) {
     encodeIntoBNBufferWriter(value, this);
   }
 }
@@ -159,7 +159,7 @@ export class BufferReader {
     return value;
   }
 
-  readUBigInt() {
+  readBigInt() {
     const [value, bytesUsed] = decodeBN(this.buffer, this.offset);
     this.offset += bytesUsed;
     return value;
