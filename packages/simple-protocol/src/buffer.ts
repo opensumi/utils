@@ -76,7 +76,7 @@ export class BufferWriter {
     encodeIntoBufferWriter(value, this);
   }
 
-  writeBuffer(value: Buffer) {
+  writeBuffer(value: Uint8Array) {
     this.writeUIntVar(value.length);
     this.allocate(value.length);
     this.buffer.set(value, this.offset);
@@ -109,7 +109,6 @@ export class BufferReader {
   }
 
   readUInt8() {
-    // const value = this.buffer.readUInt8(this.offset);
     const value = this.dataView.getUint8(this.offset);
     this.offset += 1;
     return value;

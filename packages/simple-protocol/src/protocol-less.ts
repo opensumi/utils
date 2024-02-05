@@ -16,7 +16,7 @@ function serializeWorker(data: unknown, writer: BufferWriter) {
   } else if (typeof data === 'string') {
     writer.writeUInt8(ProtocolType.String);
     writer.writeString(data);
-  } else if (Buffer.isBuffer(data)) {
+  } else if (data instanceof Uint8Array) {
     writer.writeUInt8(ProtocolType.Buffer);
     writer.writeBuffer(data);
   } else if (Array.isArray(data)) {
