@@ -11,8 +11,8 @@ function serializeWorker(data: unknown, writer: BufferWriter) {
     writer.writeUInt8(ProtocolType.UBigInt);
     writer.writeUBigInt(data);
   } else if (typeof data === 'number') {
-    writer.writeUInt8(ProtocolType.UInt32);
-    writer.writeUInt32BE(data);
+    writer.writeUInt8(ProtocolType.Int32);
+    writer.writeInt32(data);
   } else if (typeof data === 'string') {
     writer.writeUInt8(ProtocolType.String);
     writer.writeString(data);
@@ -53,8 +53,8 @@ function deserializeWorker(reader: BufferReader) {
       return reader.readUInt8();
     case ProtocolType.UInt16:
       return reader.readUInt16BE();
-    case ProtocolType.UInt32:
-      return reader.readUInt32BE();
+    case ProtocolType.Int32:
+      return reader.readInt32();
     case ProtocolType.JSONObject: {
       const buffer = reader.readBuffer();
       const json = buffer.toString('utf8');

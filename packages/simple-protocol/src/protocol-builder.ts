@@ -5,7 +5,7 @@ export const ProtocolType = {
   Buffer: 1,
   UInt8: 2,
   UInt16: 3,
-  UInt32: 4,
+  Int32: 4,
   JSONObject: 5,
   UBigInt: 6,
   Array: 7,
@@ -263,12 +263,12 @@ export class ProtocolBuilder {
         );
         codeFactory.quickInvokeMethod('writeUInt16BE');
         break;
-      case 'UInt32':
+      case 'Int32':
         codeFactory.assert(
           decl,
           `typeof ${codeFactory.inputVarName} === 'number'`,
         );
-        codeFactory.quickInvokeMethod('writeUInt32BE');
+        codeFactory.quickInvokeMethod('writeInt32');
         break;
       case 'JSONObject':
         codeFactory.assert(
@@ -409,9 +409,9 @@ export class ProtocolBuilder {
           return reader.readUInt16BE();
         };
         break;
-      case 'UInt32':
+      case 'Int32':
         fn = (reader) => {
-          return reader.readUInt32BE();
+          return reader.readInt32();
         };
         break;
       case 'JSONObject':

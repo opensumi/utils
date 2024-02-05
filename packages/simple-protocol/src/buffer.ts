@@ -72,6 +72,12 @@ export class BufferWriter {
     this.offset += 4;
   }
 
+  writeInt32(value: number) {
+    this.allocate(4);
+    this.dataView.setUint32(this.offset, value, this.littleEndian);
+    this.offset += 4;
+  }
+
   writeUIntVar(value: number) {
     encodeIntoBufferWriter(value, this);
   }
@@ -122,6 +128,12 @@ export class BufferReader {
 
   readUInt32BE() {
     const value = this.dataView.getUint32(this.offset, this.littleEndian);
+    this.offset += 4;
+    return value;
+  }
+
+  readInt32() {
+    const value = this.dataView.getInt32(this.offset, this.littleEndian);
     this.offset += 4;
     return value;
   }

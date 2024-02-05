@@ -23,7 +23,7 @@ describe('protocol builder', () => {
           name: 'sixteen',
         },
         {
-          type: 'UInt32',
+          type: 'Int32',
           name: 'thirtytwo',
         },
         {
@@ -59,7 +59,7 @@ describe('protocol builder', () => {
               name: 'sixteen',
             },
             {
-              type: 'UInt32',
+              type: 'Int32',
               name: 'thirtytwo',
             },
             {
@@ -183,7 +183,7 @@ describe('protocol builder', () => {
           name: 'sixteen',
         },
         {
-          type: 'UInt32',
+          type: 'Int32',
           name: 'thirtytwo',
         },
         {
