@@ -43,7 +43,7 @@ export type ProtocolDeclaration =
 
 export const noop = () => {};
 
-export interface IProtobolBuilderOptions {
+export interface IProtocolBuilderOptions {
   /**
    * If true, the buffer will remove the ProtocolType header.
    */
@@ -107,11 +107,11 @@ type TProtocolCodeFactoryOpration =
 let varId = 0;
 
 class ProtocolCodeFactory {
-  opeartorVarName = 'writer';
+  operatorVarName = 'writer';
   inputVarName = 'data';
 
   assert(decl: ProtocolDeclaration, code: string) {
-    this.addOpeartion({
+    this.addOperation({
       type: 'assertType',
       decl: JSON.stringify({ type: decl.type, name: decl.name }),
       code,
@@ -120,7 +120,7 @@ class ProtocolCodeFactory {
   }
 
   comment(comment: string) {
-    this.addOpeartion({
+    this.addOperation({
       type: 'write',
       code: `// ${comment}`,
     });
@@ -132,7 +132,7 @@ class ProtocolCodeFactory {
 
   varName(ref: string) {
     const nextVarName = this.getNextVarName();
-    this.addOpeartion({
+    this.addOperation({
       type: 'write',
       code: `var ${nextVarName} = ` + ref + '\n',
     });
@@ -140,26 +140,26 @@ class ProtocolCodeFactory {
   }
 
   quickInvokeMethodWithCustomStr(method: keyof BufferWriter, str: string) {
-    this.addOpeartion({
+    this.addOperation({
       type: 'write',
-      code: `${this.opeartorVarName}.${method}(${str});`,
+      code: `${this.operatorVarName}.${method}(${str});`,
     });
   }
 
   quickInvokeMethod(method: keyof BufferWriter, prefix = '', suffix = '') {
-    this.addOpeartion({
+    this.addOperation({
       type: 'write',
-      code: `${this.opeartorVarName}.${method}(${prefix}${this.inputVarName}${suffix});`,
+      code: `${this.operatorVarName}.${method}(${prefix}${this.inputVarName}${suffix});`,
     });
   }
 
   addFactory(factory: ProtocolCodeFactory) {
-    this.opreations.push(...factory.opreations);
+    this.operations.push(...factory.operations);
   }
 
-  opreations = [] as TProtocolCodeFactoryOpration[];
-  addOpeartion(opearation: TProtocolCodeFactoryOpration) {
-    this.opreations.push(opearation);
+  operations = [] as TProtocolCodeFactoryOpration[];
+  addOperation(opearation: TProtocolCodeFactoryOpration) {
+    this.operations.push(opearation);
   }
 
   args() {
@@ -169,7 +169,7 @@ class ProtocolCodeFactory {
 
   header() {
     let code = '';
-    code += `${this.opeartorVarName}.offset = 0;\n`;
+    code += `${this.operatorVarName}.offset = 0;\n`;
     code += `var _x = ${this.inputVarName};\n`;
 
     return code;
@@ -178,7 +178,7 @@ class ProtocolCodeFactory {
   body() {
     let code = '';
 
-    const rawOp = this.opreations;
+    const rawOp = this.operations;
     for (let i = 0; i < rawOp.length; i++) {
       const e = rawOp[i];
       if (e.type === 'assertType') {
@@ -197,23 +197,23 @@ class ProtocolCodeFactory {
 
   footer() {
     let code = '';
-    code += `return ${this.opeartorVarName}.dump();\n`;
+    code += `return ${this.operatorVarName}.dump();\n`;
     return code;
   }
 
   create(options: ICompileWriterOptions = {}) {
     const buffer = allocateBuffer(options.initialAllocSize ?? 1024 * 1024);
     const writer = new BufferWriter(buffer);
-    const body = `function ProtolWriter(${this.args().join(', ')}) {
+    const body = `function ProtoWriter(${this.args().join(', ')}) {
   ${this.header()}
   ${this.body()}
   ${this.footer()}
 }
-return ProtolWriter;
+return ProtoWriter;
 `;
 
     console.log(body);
-    const fn = new Function(this.opeartorVarName, 'assertWriteType', body);
+    const fn = new Function(this.operatorVarName, 'assertWriteType', body);
     return fn(writer, assertWriteType);
   }
 }
@@ -221,7 +221,7 @@ return ProtolWriter;
 export class ProtocolBuilder {
   compact: boolean;
   decl: ProtocolDeclaration;
-  constructor(decls: ProtocolDeclaration, options?: IProtobolBuilderOptions) {
+  constructor(decls: ProtocolDeclaration, options?: IProtocolBuilderOptions) {
     this.decl = decls;
     this.compact = !!options?.compact;
   }
@@ -288,7 +288,7 @@ export class ProtocolBuilder {
         codeFactory.comment(`Array ${decl.name} start`);
         codeFactory.assert(decl, `Array.isArray(${codeFactory.inputVarName})`);
         codeFactory.quickInvokeMethod('writeUIntVar', '', '.length');
-        codeFactory.addOpeartion({
+        codeFactory.addOperation({
           type: 'write',
           code: `for (const element of ${codeFactory.inputVarName}) {`,
         });
@@ -299,7 +299,7 @@ export class ProtocolBuilder {
           (decl as ProtocolArrayDeclaration).element,
         );
         codeFactory.addFactory(newCodeFactory);
-        codeFactory.addOpeartion({
+        codeFactory.addOperation({
           type: 'write',
           code: `}`,
         });
