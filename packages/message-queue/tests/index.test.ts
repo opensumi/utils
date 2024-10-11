@@ -1,4 +1,5 @@
 import { MessageQueue } from '../src/index';
+import { it, describe, expect } from 'vitest';
 
 describe('message-queue', () => {
   it('should work', () => {

@@ -1,4 +1,5 @@
 import { EventEmitter } from '../src/index';
+import { vi, it, describe, expect } from 'vitest';
 
 describe('typed event emitter', () => {
   it('basic usage', () => {
@@ -7,8 +8,8 @@ describe('typed event emitter', () => {
       foo: [string];
     }>();
 
-    const spy = jest.fn();
-    const spy2 = jest.fn();
+    const spy = vi.fn();
+    const spy2 = vi.fn();
 
     emitter.on('test', spy);
     emitter.on('foo', spy2);
@@ -46,8 +47,8 @@ describe('typed event emitter', () => {
     const emitter = new EventEmitter<{
       [key: string]: [string];
     }>();
-    const spy = jest.fn();
-    const spy2 = jest.fn();
+    const spy = vi.fn();
+    const spy2 = vi.fn();
     emitter.on('test', spy);
     emitter.on('test', spy2);
     emitter.emit('test', 'hello');
@@ -66,9 +67,9 @@ describe('typed event emitter', () => {
     const emitter = new EventEmitter<{
       [key: string]: [string];
     }>();
-    const spy = jest.fn();
-    const spy2 = jest.fn();
-    const spy3 = jest.fn();
+    const spy = vi.fn();
+    const spy2 = vi.fn();
+    const spy3 = vi.fn();
     const disposeSpy = emitter.on('test', spy);
     emitter.on('test', spy2);
 
@@ -92,7 +93,7 @@ describe('typed event emitter', () => {
     const emitter = new EventEmitter<{
       test: [...args: any];
     }>();
-    const spy = jest.fn();
+    const spy = vi.fn();
     emitter.on('test', spy);
     emitter.emit('test');
     expect(spy).toBeCalledTimes(1);
@@ -104,7 +105,7 @@ describe('typed event emitter', () => {
     const emitter = new EventEmitter<{
       test: (a: string, b: number) => void;
     }>();
-    const spy = jest.fn();
+    const spy = vi.fn();
     emitter.on('test', (a, b) => {
       spy(a, b);
     });

@@ -1,4 +1,5 @@
 import { EventEmitter } from '../src/index';
+import { vi, it, describe, expect } from 'vitest';
 
 describe('event emitter', () => {
   it('basic usage', () => {
@@ -6,8 +7,8 @@ describe('event emitter', () => {
       [key: string]: [string];
     }>();
 
-    const spy = jest.fn();
-    const spy2 = jest.fn();
+    const spy = vi.fn();
+    const spy2 = vi.fn();
     emitter.on('test', spy);
     emitter.on('foo', spy2);
 
@@ -43,8 +44,8 @@ describe('event emitter', () => {
     const emitter = new EventEmitter<{
       [key: string]: [string];
     }>();
-    const spy = jest.fn();
-    const spy2 = jest.fn();
+    const spy = vi.fn();
+    const spy2 = vi.fn();
     emitter.on('test', spy);
     emitter.on('test', spy2);
     emitter.emit('test', 'hello');
@@ -63,9 +64,9 @@ describe('event emitter', () => {
     const emitter = new EventEmitter<{
       [key: string]: [string];
     }>();
-    const spy = jest.fn();
-    const spy2 = jest.fn();
-    const spy3 = jest.fn();
+    const spy = vi.fn();
+    const spy2 = vi.fn();
+    const spy3 = vi.fn();
     const disposeSpy = emitter.on('test', (...args) => {
       spy(...args);
     });

@@ -11,6 +11,8 @@ function serializeWorker(data: unknown, writer: BufferWriter) {
     writer.writeUInt8(ProtocolType.BigInt);
     writer.writeBigInt(data);
   } else if (typeof data === 'number') {
+    // 最小值：−2^31 (即 -2,147,483,648)
+    // 最大值：2^31 − 1 (即 2,147,483,647)
     writer.writeUInt8(ProtocolType.Int32);
     writer.writeInt32(data);
   } else if (typeof data === 'string') {

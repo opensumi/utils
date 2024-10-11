@@ -14,6 +14,7 @@ import {
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { BufferWriter } from '../src/buffer';
+import { it, describe, expect } from 'vitest';
 
 // Helper function while debugging.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

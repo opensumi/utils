@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "lib": ["ES2023", "DOM"],
-    "types": ["jest", "node"],
+    "types": ["node"],
     "target": "es2022",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "moduleResolution": "node"
   }
 }

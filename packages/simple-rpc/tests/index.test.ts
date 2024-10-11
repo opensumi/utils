@@ -1,4 +1,5 @@
 import { createPair, sleep } from './utils';
+import { it, describe, expect } from 'vitest';
 
 describe('simple-rpc', () => {
   it('should work', async () => {
@@ -28,7 +29,7 @@ describe('simple-rpc', () => {
       return a + b;
     });
 
-    expect(c1.invoke('add1', 1, 2)).rejects.toThrow();
+    await expect(c1.invoke('add1', 1, 2)).rejects.toThrow();
 
     await c1.invoke('add2').catch((e) => {
       console.log(e);
@@ -46,11 +47,11 @@ describe('simple-rpc', () => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       err.cause = new Error('cause');
-
+      console.log('throw error');
       throw err;
     });
 
-    expect(c1.invoke('add', 1, 2)).rejects.toThrow(
+    await expect(c1.invoke('add', 1, 2)).rejects.toThrow(
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       new Error('error', {

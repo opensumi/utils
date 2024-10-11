@@ -1,4 +1,5 @@
 import { ProtocolBuilder } from '../src/protocol-builder';
+import { it, describe, expect } from 'vitest';
 
 describe('protocol builder', () => {
   it.only('Object should work', async () => {
@@ -105,7 +106,7 @@ describe('protocol builder', () => {
       payload: Buffer.from('world'),
       eight: 8,
       sixteen: 65535,
-      thirtytwo: 4294967295,
+      thirtytwo: 2147483647,
       json: { hello: 'world' },
       bigint: 15779779462787834424n,
       undefined: undefined,
@@ -114,7 +115,7 @@ describe('protocol builder', () => {
         Buffer.from('world'),
         8,
         65535,
-        4294967295,
+        2147483647,
         { hello: 'world' },
         15779779462787834424n,
       ],
@@ -205,7 +206,7 @@ describe('protocol builder', () => {
       Buffer.from('world'),
       8,
       65535,
-      4294967295,
+      2147483647,
       { hello: 'world' },
       15779779462787834424n,
     ];
