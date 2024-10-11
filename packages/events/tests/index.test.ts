@@ -12,14 +12,14 @@ describe('event emitter', () => {
     emitter.on('foo', spy2);
 
     expect(emitter.hasListener('test')).toBe(true);
-    const listeners = emitter.getListeners('test');
+    const listeners = emitter.getAllListeners('test');
     expect(listeners.length).toBe(1);
 
     emitter.emit('test', 'hello');
     expect(spy).toBeCalledWith('hello');
     emitter.off('test', spy);
 
-    const listeners2 = emitter.getListeners('test');
+    const listeners2 = emitter.getAllListeners('test');
     expect(listeners2.length).toBe(0);
 
     emitter.emit('test', 'hello');
@@ -66,7 +66,9 @@ describe('event emitter', () => {
     const spy = jest.fn();
     const spy2 = jest.fn();
     const spy3 = jest.fn();
-    const disposeSpy = emitter.on('test', spy);
+    const disposeSpy = emitter.on('test', (...args) => {
+      spy(...args);
+    });
     emitter.on('test', spy2);
 
     const disposeSpy3 = emitter.once('test', spy3);

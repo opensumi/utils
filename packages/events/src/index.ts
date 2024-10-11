@@ -2,14 +2,49 @@ export interface IDisposable {
   dispose(): void;
 }
 
-export type Handler<T extends any[]> = (...args: T) => void;
+/**
+ *
+ * ```ts
+ * interface EventTypes {
+ *   'event-with-parameters': any[];
+ *   'event-with-parameters2': [string, number];
+ *   'event-with-example-handler': (...args: any[]) => void;
+ * }
+ * ```
+ */
+export type EventTypes = object;
+type Argument = any;
 
-export class EventEmitter<Events extends Record<any, any[]>> {
-  private _listeners: Map<keyof Events, any[]> = new Map();
+type ArgumentMap<T extends object> = {
+  [K in keyof T]: T[K] extends (...args: Argument[]) => void
+    ? Parameters<T[K]>
+    : T[K] extends Argument[]
+    ? T[K]
+    : Argument[];
+};
 
-  on<Event extends keyof Events>(
-    event: Event,
-    listener: Handler<Events[Event]>,
+export type EventNames<T extends EventTypes> = T extends string | symbol
+  ? T
+  : keyof T;
+
+export type EventListener<
+  T extends EventTypes,
+  K extends EventNames<T>,
+> = T extends string | symbol
+  ? (...args: Argument[]) => void
+  : (
+      ...args: ArgumentMap<Exclude<T, string | symbol>>[Extract<K, keyof T>]
+    ) => void;
+
+export class EventEmitter<Events extends EventTypes = EventTypes> {
+  private _listeners: Map<
+    EventNames<Events>,
+    EventListener<Events, EventNames<Events>>[]
+  > = new Map();
+
+  on<T extends EventNames<Events>>(
+    event: T,
+    listener: EventListener<Events, T>,
   ): IDisposable {
     if (!this._listeners.has(event)) {
       this._listeners.set(event, []);
@@ -21,13 +56,14 @@ export class EventEmitter<Events extends Record<any, any[]>> {
     };
   }
 
-  off<Event extends keyof Events>(
-    event: Event,
-    listener: Handler<Events[Event]>,
+  off<T extends EventNames<Events>>(
+    event: T,
+    listener: EventListener<Events, T>,
   ) {
     if (!this._listeners.has(event)) {
       return;
     }
+
     const listeners = this._listeners.get(event)!;
     const index = listeners.indexOf(listener);
     if (index !== -1) {
@@ -35,24 +71,23 @@ export class EventEmitter<Events extends Record<any, any[]>> {
     }
   }
 
-  once<Event extends keyof Events>(
-    event: Event,
-    listener: Handler<Events[Event]>,
+  once<T extends EventNames<Events>>(
+    event: T,
+    listener: EventListener<Events, T>,
   ) {
-    const toDispose = this.on(
-      event,
-      (...args: Parameters<Handler<Events[Event]>>) => {
-        toDispose.dispose();
-        listener.apply(this, args);
-      },
-    );
+    const remove = this.on(event, ((
+      ...args: Parameters<EventListener<Events, T>>
+    ) => {
+      remove.dispose();
+      listener.apply(this, args);
+    }) as EventListener<Events, T>);
 
-    return toDispose;
+    return remove;
   }
 
-  emit<Event extends keyof Events>(
-    event: Event,
-    ...args: Parameters<Handler<Events[Event]>>
+  emit<T extends EventNames<Events>>(
+    event: T,
+    ...args: Parameters<EventListener<Events, T>>
   ) {
     if (!this._listeners.has(event)) {
       return;
@@ -62,12 +97,22 @@ export class EventEmitter<Events extends Record<any, any[]>> {
     );
   }
 
-  hasListener<Event extends keyof Events>(event: Event) {
+  hasListener<T extends EventNames<Events>>(event: T) {
     return this._listeners.has(event);
   }
 
-  getListeners<Event extends keyof Events>(event: Event) {
+  eventNames() {
+    return Array.from(this._listeners.keys());
+  }
+
+  getAllListeners<T extends EventNames<Events>>(
+    event: T,
+  ): Array<EventListener<Events, T>> {
     return this._listeners.get(event) || [];
+  }
+
+  removeAllListeners<T extends EventNames<Events>>(event: T) {
+    this._listeners.delete(event);
   }
 
   dispose() {

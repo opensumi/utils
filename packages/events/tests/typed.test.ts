@@ -1,6 +1,6 @@
 import { EventEmitter } from '../src/index';
 
-describe('event emitter types', () => {
+describe('typed event emitter', () => {
   it('basic usage', () => {
     const emitter = new EventEmitter<{
       test: [string, string];
@@ -14,14 +14,14 @@ describe('event emitter types', () => {
     emitter.on('foo', spy2);
 
     expect(emitter.hasListener('test')).toBe(true);
-    const listeners = emitter.getListeners('test');
+    const listeners = emitter.getAllListeners('test');
     expect(listeners.length).toBe(1);
 
     emitter.emit('test', 'hello', 'world');
     expect(spy).toBeCalledWith('hello', 'world');
     emitter.off('test', spy);
 
-    const listeners2 = emitter.getListeners('test');
+    const listeners2 = emitter.getAllListeners('test');
     expect(listeners2.length).toBe(0);
 
     emitter.emit('test', 'hello', 'world');
@@ -33,11 +33,12 @@ describe('event emitter types', () => {
     emitter.emit('test', 'hello', 'world');
     expect(spy).toBeCalledTimes(2);
 
-    emitter.off('bar' as any, spy);
+    // @ts-expect-error bar is not a valid event
+    emitter.off('bar', spy);
 
     emitter.dispose();
 
-    emitter.emit('test' as any, 'hello');
+    emitter.emit('test', 'hello', 'world2');
     expect(spy).toBeCalledTimes(2);
   });
 
@@ -80,9 +81,42 @@ describe('event emitter types', () => {
 
     disposeSpy.dispose();
     emitter.emit('test', 'hello');
+
     expect(spy).toBeCalledTimes(1);
     expect(spy2).toBeCalledTimes(2);
     expect(spy3).toBeCalledTimes(0);
+    emitter.dispose();
+  });
+
+  it('event type can be string literal', () => {
+    const emitter = new EventEmitter<{
+      test: [...args: any];
+    }>();
+    const spy = jest.fn();
+    emitter.on('test', spy);
+    emitter.emit('test');
+    expect(spy).toBeCalledTimes(1);
+
+    emitter.dispose();
+  });
+
+  it('event type can be function', () => {
+    const emitter = new EventEmitter<{
+      test: (a: string, b: number) => void;
+    }>();
+    const spy = jest.fn();
+    emitter.on('test', (a, b) => {
+      spy(a, b);
+    });
+    emitter.emit('test', 'hello', 1);
+    expect(spy).toBeCalledWith('hello', 1);
+
+    const events = emitter.getAllListeners('test');
+    expect(events.length).toBe(1);
+
+    const eventNames = emitter.eventNames();
+    expect(eventNames.length).toBe(1);
+
     emitter.dispose();
   });
 });
