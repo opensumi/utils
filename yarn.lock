@@ -1062,12 +1062,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@opensumi/simple-protocol@workspace:packages/simple-protocol":
-  version: 0.0.0-use.local
-  resolution: "@opensumi/simple-protocol@workspace:packages/simple-protocol"
-  languageName: unknown
-  linkType: soft
-
 "@opensumi/simple-rpc@workspace:packages/simple-rpc":
   version: 0.0.0-use.local
   resolution: "@opensumi/simple-rpc@workspace:packages/simple-rpc"
